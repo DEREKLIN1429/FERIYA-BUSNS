@@ -9,7 +9,7 @@
             --primary-color: #007bff;
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
-            --danger-color: #dc3545; /* 紅色用於登出/錄音中 */
+            --danger-color: #dc3545;
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -36,10 +36,20 @@
         /* --- 主程式畫面 --- */
         #app-screen { display: none; width: 100%; max-width: 500px; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         
-        /* Header 調整：加入左側登出按鈕 */
+        /* Header 設定 */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
-        .header-btn { font-size: 24px; cursor: pointer; color: #555; padding: 8px; border-radius: 50%; transition: background 0.2s; }
+        /* 按鈕樣式 (鎖頭 & 齒輪) */
+        .header-btn { 
+            font-size: 26px; /* 圖示大小 */
+            cursor: pointer; 
+            color: #555; 
+            padding: 8px; 
+            border-radius: 50%; 
+            transition: background 0.2s, color 0.2s;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+        }
         .header-btn:active { background: #e9ecef; }
         
         .header-title { text-align: center; flex-grow: 1; }
@@ -60,7 +70,6 @@
             display: flex; align-items: center; justify-content: center; overflow: hidden;
             position: relative;
         }
-        /* 比例類別 */
         .ratio-4-3 { aspect-ratio: 4/3; }
         .ratio-16-9 { aspect-ratio: 16/9; }
         .ratio-1-1 { aspect-ratio: 1/1; }
@@ -104,7 +113,6 @@
         .modal-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem;}
         select.modal-input { background: white; }
 
-        /* 動畫 */
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         .hidden { display: none !important; }
         .loading { text-align: center; color: var(--primary-color); font-weight: bold; margin-top: 10px; display: none; }
@@ -123,10 +131,9 @@
 
     <div id="app-screen">
         <div class="header">
-            <div class="header-btn" onclick="logout()" title="Logout (登出)">
-                🚪
+            <div class="header-btn" onclick="logout()" title="Lock / Logout (鎖定/登出)">
+                🔒
             </div>
-            
             <div class="header-title">
                 <h2>Key Notes Recorder<br>重點事項紀錄</h2>
             </div>
@@ -220,33 +227,27 @@
             </div>
 
             <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
-            
-            <button class="btn-main" onclick="logout()" style="background-color: #dc3545; margin-top: 15px;">Logout (登出系統)</button>
         </div>
     </div>
 
 <script>
-    // ================= 初始化變數 =================
-    // 初始預設值
+    // ================= 初始化 =================
     const DEFAULT_PASS = "1234"; 
     const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK/exec";
     const DEFAULT_VIEW_URL = "https://docs.google.com/spreadsheets/d/1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA/edit?gid=0#gid=0";
 
-    // 狀態變數
     let processedImageBase64 = ""; 
     let recognition;
     let isRecording = false;
     let voiceTimer = null;
 
-    // ================= 1. 登入與啟動邏輯 =================
+    // ================= 1. 登入/登出 =================
 
     window.onload = function() {
-        // 第一次使用時，將預設密碼存入
         if(!localStorage.getItem("app_password")) {
             localStorage.setItem("app_password", DEFAULT_PASS);
         }
 
-        // 檢查是否已登入
         const isLoggedIn = localStorage.getItem("isLoggedIn");
         if(isLoggedIn === "true") {
             showApp();
@@ -269,14 +270,14 @@
         }
     }
 
-    // --- 新增：登出功能 ---
+    // 登出/鎖定功能
     function logout() {
-        if(confirm("Are you sure you want to logout?\n(確定要登出嗎？)")) {
-            localStorage.removeItem("isLoggedIn"); // 移除登入狀態
+        if(confirm("Lock the app and logout?\n(確定要鎖定並登出嗎？)")) {
+            localStorage.removeItem("isLoggedIn"); 
             document.getElementById('app-screen').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex'; // 顯示登入畫面
-            document.getElementById('loginPass').value = ""; // 清空輸入框
-            closeSettings(); // 關閉設定視窗
+            document.getElementById('login-screen').style.display = 'flex'; 
+            document.getElementById('loginPass').value = ""; 
+            closeSettings();
         }
     }
 
@@ -286,7 +287,7 @@
         applySettings(); 
     }
 
-    // ================= 2. 設定功能 (Settings) =================
+    // ================= 2. 設定功能 =================
 
     function openSettings() {
         loadSettingsToUI();
@@ -306,7 +307,7 @@
         const viewUrl = document.getElementById('set-view-url').value;
 
         if(newPass.trim() === "") {
-            alert("Password cannot be empty! (密碼不能空白)");
+            alert("Password cannot be empty!");
             return;
         }
 
@@ -317,7 +318,7 @@
         localStorage.setItem("cfg_script_url", scriptUrl);
         localStorage.setItem("cfg_view_url", viewUrl);
 
-        alert("Settings Saved! (設定已儲存)");
+        alert("Settings Saved!");
         closeSettings();
         applySettings();
     }
@@ -343,7 +344,7 @@
         else container.classList.add("ratio-1-1");
     }
 
-    // ================= 3. 圖片處理 (含裁切) =================
+    // ================= 3. 圖片處理 =================
 
     function triggerCam() { document.getElementById('input-cam').click(); }
     function triggerGallery() { document.getElementById('input-gallery').click(); }
@@ -352,12 +353,9 @@
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const reader = new FileReader();
-            
             reader.onload = function(e) {
                 const img = new Image();
-                img.onload = function() {
-                    processImageWithCanvas(img);
-                };
+                img.onload = function() { processImageWithCanvas(img); };
                 img.src = e.target.result;
             }
             reader.readAsDataURL(file);
@@ -367,8 +365,8 @@
     function processImageWithCanvas(img) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
         const ratioStr = localStorage.getItem("cfg_ratio") || "4/3";
+        
         let targetRatio = 4/3;
         if(ratioStr === "16/9") targetRatio = 16/9;
         if(ratioStr === "1/1") targetRatio = 1;
@@ -376,19 +374,14 @@
         let srcW = img.width;
         let srcH = img.height;
         let srcRatio = srcW / srcH;
-        
         let drawW, drawH, startX, startY;
 
         if (srcRatio > targetRatio) {
-            drawH = srcH;
-            drawW = srcH * targetRatio;
-            startX = (srcW - drawW) / 2;
-            startY = 0;
+            drawH = srcH; drawW = srcH * targetRatio;
+            startX = (srcW - drawW) / 2; startY = 0;
         } else {
-            drawW = srcW;
-            drawH = srcW / targetRatio;
-            startX = 0;
-            startY = (srcH - drawH) / 2;
+            drawW = srcW; drawH = srcW / targetRatio;
+            startX = 0; startY = (srcH - drawH) / 2;
         }
 
         const MAX_WIDTH = 1000; 
@@ -397,7 +390,6 @@
         canvas.height = drawH * scale;
 
         ctx.drawImage(img, startX, startY, drawW, drawH, 0, 0, canvas.width, canvas.height);
-
         processedImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
         
         const preview = document.getElementById('preview-img');
@@ -406,45 +398,36 @@
         document.querySelector('.placeholder').style.display = 'none';
     }
 
-    // ================= 4. 語音功能 (Voice) =================
+    // ================= 4. 語音功能 =================
 
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            alert("Browser not supported (瀏覽器不支援)"); return;
+            alert("Browser not supported"); return;
         }
-
-        if (isRecording) {
-            stopVoice();
-        } else {
-            startVoice();
-        }
+        if (isRecording) stopVoice();
+        else startVoice();
     }
 
     function startVoice() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
-        
         recognition.lang = localStorage.getItem("cfg_lang") || 'cmn-Hant-TW';
         recognition.continuous = true;
         recognition.interimResults = false;
 
         recognition.onstart = function() {
             isRecording = true;
-            const btn = document.getElementById('voiceBtn');
-            btn.innerText = "🛑 Stop Recording (停止錄音)";
-            btn.classList.add('recording');
+            document.getElementById('voiceBtn').classList.add('recording');
+            document.getElementById('voiceBtn').innerText = "🛑 Stop";
             
             const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
-            voiceTimer = setTimeout(() => {
-                stopVoice();
-            }, timeoutSec * 1000);
+            voiceTimer = setTimeout(stopVoice, timeoutSec * 1000);
         };
 
         recognition.onend = function() {
             isRecording = false;
-            const btn = document.getElementById('voiceBtn');
-            btn.innerText = "🎤 Start Voice (開始錄音)";
-            btn.classList.remove('recording');
+            document.getElementById('voiceBtn').classList.remove('recording');
+            document.getElementById('voiceBtn').innerText = "🎤 Start Voice (開始錄音)";
             if(voiceTimer) clearTimeout(voiceTimer);
         };
 
@@ -462,14 +445,14 @@
         if(voiceTimer) clearTimeout(voiceTimer);
     }
 
-    // ================= 5. 存檔上傳 (Upload) =================
+    // ================= 5. 上傳 =================
 
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const scriptUrl = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
 
         if(!processedImageBase64 && !note) {
-            alert("Empty! Please take a photo or write a note.\n(內容空白！請拍照或輸入文字)"); return;
+            alert("Empty! Please take a photo or write a note."); return;
         }
 
         const btn = document.getElementById('saveBtn');
@@ -486,7 +469,7 @@
         })
         .then(r => r.json())
         .then(res => {
-            alert("✅ Upload Success! (上傳成功)");
+            alert("✅ Upload Success!");
             document.getElementById('noteInput').value = "";
             processedImageBase64 = "";
             document.getElementById('preview-img').style.display = 'none';
@@ -494,7 +477,7 @@
         })
         .catch(e => {
             console.error(e);
-            alert("❌ Upload Failed or Network Error.\n(上傳失敗，請檢查網路或網址設定)");
+            alert("❌ Upload Failed.");
         })
         .finally(() => {
             btn.disabled = false;
