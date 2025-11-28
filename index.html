@@ -33,7 +33,7 @@
             border-radius: 8px; font-size: 18px; text-align: center;
         }
 
-        /* --- 上傳狀態視窗 (Status Modal) - 新增功能 --- */
+        /* --- 上傳狀態視窗 --- */
         #status-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;
@@ -73,7 +73,6 @@
         .card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .section-title { font-weight: bold; color: #555; margin-bottom: 10px; display: block; font-size: 1rem; }
 
-        /* --- 1. 圖片區 --- */
         .photo-controls { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn-half { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 5px;}
         .btn-cam { background-color: #ffc107; color: #333; }
@@ -91,7 +90,6 @@
         #preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
         .placeholder { color: #aaa; text-align: center; }
 
-        /* --- 2. 文字/語音區 --- */
         textarea { 
             width: 100%; height: 120px; padding: 12px; border: 2px solid #eee; 
             border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; font-family: inherit;
@@ -106,13 +104,12 @@
         }
         .btn-voice.recording { background-color: var(--danger-color); animation: pulse 1s infinite; }
 
-        /* --- 底部按鈕 --- */
         .footer-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-bottom: 30px;}
         .btn-main { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
         .btn-save { background-color: var(--primary-color); }
         .btn-view { background-color: #6c757d; }
 
-        /* --- 設定彈窗 (Settings) --- */
+        /* --- 設定彈窗 --- */
         #settings-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
@@ -122,10 +119,13 @@
             border-radius: 15px; max-height: 85vh; overflow-y: auto;
         }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
-        .modal-group { margin-bottom: 18px; }
-        .modal-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.95rem; color: #333; }
-        .modal-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem;}
+        .modal-group { margin-bottom: 15px; }
+        .modal-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333; }
+        .modal-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem;}
         select.modal-input { background: white; }
+        
+        /* 提示文字 */
+        .hint-text { font-size: 0.8rem; color: #888; margin-top: 3px; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         .hidden { display: none !important; }
@@ -200,14 +200,17 @@
                 <h3>Settings (設定)</h3>
                 <button onclick="closeSettings()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
+            
             <div class="modal-group" style="background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc;">
                 <label style="color:#d63384;">🔑 Login Password (修改登入密碼)</label>
-                <input type="text" id="set-password" class="modal-input" placeholder="Current: 1234 (預設)">
+                <input type="text" id="set-password" class="modal-input" placeholder="Current: 1234">
             </div>
+
             <div class="modal-group">
                 <label>1. Voice Timeout (錄音停止時間 / 秒)</label>
                 <input type="number" id="set-timeout" class="modal-input" value="10">
             </div>
+
             <div class="modal-group">
                 <label>2. Language (語音辨識語言)</label>
                 <select id="set-lang" class="modal-input">
@@ -216,6 +219,7 @@
                     <option value="ja-JP">Japanese (日文)</option>
                 </select>
             </div>
+
             <div class="modal-group">
                 <label>3. Photo Aspect Ratio (照片比例)</label>
                 <select id="set-ratio" class="modal-input">
@@ -224,14 +228,23 @@
                     <option value="1/1">1:1 (Square)</option>
                 </select>
             </div>
+
             <div class="modal-group">
                 <label>4. Upload URL (Google Script 上傳網址)</label>
                 <input type="text" id="set-script-url" class="modal-input" style="font-size:0.8em; color:#555;">
             </div>
+
             <div class="modal-group">
                 <label>5. View URL (Google Sheet 檢視網址)</label>
                 <input type="text" id="set-view-url" class="modal-input" style="font-size:0.8em; color:#555;">
             </div>
+
+            <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px;">
+                <label style="color:var(--primary-color);">6. Google Drive Folder ID (存檔資料夾 ID)</label>
+                <input type="text" id="set-folder-id" class="modal-input" placeholder="Leave empty for Root (空白則存根目錄)">
+                <div class="hint-text">The code at the end of Folder URL (網址最後那串代碼)</div>
+            </div>
+
             <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
         </div>
     </div>
@@ -303,6 +316,8 @@
         const ratio = document.getElementById('set-ratio').value;
         const scriptUrl = document.getElementById('set-script-url').value;
         const viewUrl = document.getElementById('set-view-url').value;
+        // 新增：取得資料夾 ID
+        const folderId = document.getElementById('set-folder-id').value;
 
         if(newPass.trim() === "") { alert("Password cannot be empty!"); return; }
 
@@ -312,6 +327,7 @@
         localStorage.setItem("cfg_ratio", ratio);
         localStorage.setItem("cfg_script_url", scriptUrl);
         localStorage.setItem("cfg_view_url", viewUrl);
+        localStorage.setItem("cfg_folder_id", folderId); // 存入 LocalStorage
 
         alert("Settings Saved!");
         closeSettings();
@@ -324,6 +340,8 @@
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         document.getElementById('set-script-url').value = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
         document.getElementById('set-view-url').value = localStorage.getItem("cfg_view_url") || DEFAULT_VIEW_URL;
+        // 讀取資料夾 ID
+        document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || "";
     }
     function applySettings() {
         const timeout = localStorage.getItem("cfg_timeout") || "10";
@@ -424,7 +442,7 @@
         if(voiceTimer) clearTimeout(voiceTimer);
     }
 
-    // ================= 5. 上傳 (修改版：增加狀態視窗) =================
+    // ================= 5. 上傳 (包含 Folder ID) =================
     function showStatus(type, title, subtitle) {
         const modal = document.getElementById('status-modal');
         const spinner = document.getElementById('status-spinner');
@@ -434,33 +452,24 @@
         const closeBtn = document.getElementById('status-close-btn');
 
         modal.style.display = 'flex';
-        text.innerText = title;
-        sub.innerText = subtitle;
+        text.innerText = title; sub.innerText = subtitle;
 
         if(type === 'loading') {
-            spinner.style.display = 'block';
-            icon.style.display = 'none';
-            closeBtn.style.display = 'none';
+            spinner.style.display = 'block'; icon.style.display = 'none'; closeBtn.style.display = 'none';
         } else if(type === 'success') {
-            spinner.style.display = 'none';
-            icon.style.display = 'block';
-            icon.innerText = '✅';
-            closeBtn.style.display = 'none';
+            spinner.style.display = 'none'; icon.style.display = 'block'; icon.innerText = '✅'; closeBtn.style.display = 'none';
         } else if(type === 'error') {
-            spinner.style.display = 'none';
-            icon.style.display = 'block';
-            icon.innerText = '❌';
-            closeBtn.style.display = 'block';
+            spinner.style.display = 'none'; icon.style.display = 'block'; icon.innerText = '❌'; closeBtn.style.display = 'block';
         }
     }
 
-    function closeStatusModal() {
-        document.getElementById('status-modal').style.display = 'none';
-    }
+    function closeStatusModal() { document.getElementById('status-modal').style.display = 'none'; }
 
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const scriptUrl = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
+        // 讀取設定的 Folder ID
+        const folderId = localStorage.getItem("cfg_folder_id") || "";
 
         if(!processedImageBase64 && !note) {
             alert("Empty! Please take a photo or write a note."); return;
@@ -468,11 +477,14 @@
 
         const btn = document.getElementById('saveBtn');
         btn.disabled = true;
-        
-        // 1. 顯示開始上傳訊息
         showStatus('loading', 'Uploading...', '資料上傳中...');
 
-        const data = { note: note, image: processedImageBase64 };
+        // 將 folderId 加入傳送資料
+        const data = { 
+            note: note, 
+            image: processedImageBase64,
+            folderId: folderId 
+        };
 
         fetch(scriptUrl, {
             method: 'POST',
@@ -480,23 +492,15 @@
         })
         .then(r => r.json())
         .then(res => {
-            // 2. 顯示成功訊息
             showStatus('success', 'Upload Success!', '上傳成功！');
-            
-            // 清空表單
             document.getElementById('noteInput').value = "";
             processedImageBase64 = "";
             document.getElementById('preview-img').style.display = 'none';
             document.querySelector('.placeholder').style.display = 'block';
-
-            // 2秒後自動關閉視窗
-            setTimeout(() => {
-                closeStatusModal();
-            }, 2000);
+            setTimeout(() => { closeStatusModal(); }, 2000);
         })
         .catch(e => {
             console.error(e);
-            // 3. 顯示失敗訊息 (不自動關閉，讓使用者點 OK)
             showStatus('error', 'Upload Failed', '上傳失敗，請檢查網路。');
         })
         .finally(() => {
