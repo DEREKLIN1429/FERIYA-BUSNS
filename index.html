@@ -10,6 +10,7 @@
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
             --danger-color: #dc3545;
+            --drive-color: #198754; /* 綠色用於 Google Drive */
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -108,6 +109,7 @@
         .btn-main { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
         .btn-save { background-color: var(--primary-color); }
         .btn-view { background-color: #6c757d; }
+        .btn-drive { background-color: var(--drive-color); } /* 新增：Drive 按鈕樣式 */
 
         /* --- 設定彈窗 --- */
         #settings-modal {
@@ -123,8 +125,6 @@
         .modal-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333; }
         .modal-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem;}
         select.modal-input { background: white; }
-        
-        /* 提示文字 */
         .hint-text { font-size: 0.8rem; color: #888; margin-top: 3px; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
@@ -191,6 +191,7 @@
         <div class="footer-btns">
             <button class="btn-main btn-save" id="saveBtn" onclick="saveToCloud()">💾 Save to Cloud (存檔至雲端)</button>
             <button class="btn-main btn-view" onclick="viewExcel()">📊 View Excel (檢視 Excel)</button>
+            <button class="btn-main btn-drive" onclick="viewDriveFolder()">📂 View Photos (檢視雲端照片)</button>
         </div>
     </div>
 
@@ -316,7 +317,6 @@
         const ratio = document.getElementById('set-ratio').value;
         const scriptUrl = document.getElementById('set-script-url').value;
         const viewUrl = document.getElementById('set-view-url').value;
-        // 新增：取得資料夾 ID
         const folderId = document.getElementById('set-folder-id').value;
 
         if(newPass.trim() === "") { alert("Password cannot be empty!"); return; }
@@ -327,7 +327,7 @@
         localStorage.setItem("cfg_ratio", ratio);
         localStorage.setItem("cfg_script_url", scriptUrl);
         localStorage.setItem("cfg_view_url", viewUrl);
-        localStorage.setItem("cfg_folder_id", folderId); // 存入 LocalStorage
+        localStorage.setItem("cfg_folder_id", folderId); 
 
         alert("Settings Saved!");
         closeSettings();
@@ -340,7 +340,6 @@
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         document.getElementById('set-script-url').value = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
         document.getElementById('set-view-url').value = localStorage.getItem("cfg_view_url") || DEFAULT_VIEW_URL;
-        // 讀取資料夾 ID
         document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || "";
     }
     function applySettings() {
@@ -442,7 +441,7 @@
         if(voiceTimer) clearTimeout(voiceTimer);
     }
 
-    // ================= 5. 上傳 (包含 Folder ID) =================
+    // ================= 5. 上傳與檢視 =================
     function showStatus(type, title, subtitle) {
         const modal = document.getElementById('status-modal');
         const spinner = document.getElementById('status-spinner');
@@ -468,7 +467,6 @@
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const scriptUrl = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
-        // 讀取設定的 Folder ID
         const folderId = localStorage.getItem("cfg_folder_id") || "";
 
         if(!processedImageBase64 && !note) {
@@ -479,12 +477,7 @@
         btn.disabled = true;
         showStatus('loading', 'Uploading...', '資料上傳中...');
 
-        // 將 folderId 加入傳送資料
-        const data = { 
-            note: note, 
-            image: processedImageBase64,
-            folderId: folderId 
-        };
+        const data = { note: note, image: processedImageBase64, folderId: folderId };
 
         fetch(scriptUrl, {
             method: 'POST',
@@ -511,6 +504,18 @@
     function viewExcel() {
         const url = localStorage.getItem("cfg_view_url") || DEFAULT_VIEW_URL;
         window.open(url, '_blank');
+    }
+
+    // 新增：檢視照片資料夾
+    function viewDriveFolder() {
+        const folderId = localStorage.getItem("cfg_folder_id");
+        if(folderId && folderId.trim() !== "") {
+            window.open("https://drive.google.com/drive/folders/" + folderId, '_blank');
+        } else {
+            if(confirm("Folder ID not set. Open Google Drive Root?\n(尚未設定資料夾 ID，要開啟雲端硬碟根目錄嗎？)")) {
+                window.open("https://drive.google.com/drive/my-drive", '_blank');
+            }
+        }
     }
 </script>
 
