@@ -85,26 +85,29 @@
         .btn-cam { background-color: #ffc107; color: #333; }
         .btn-gallery { background-color: #fd7e14; }
 
-        /* --- 圖片預覽框架 (綠色觀景窗設計) --- */
+        /* --- 圖片預覽框架 (可點擊) --- */
         #preview-container { 
             width: 100%; 
-            background: #f0fff0; /* 淡淡的綠色背景 */
-            border: 2px solid var(--frame-color); /* 改成實線綠色 */
+            background: #f0fff0; 
+            border: 2px solid var(--frame-color);
             border-radius: 8px; 
             display: flex; align-items: center; justify-content: center; 
             overflow: hidden;
             position: relative;
             box-sizing: border-box;
             transition: aspect-ratio 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 230, 0, 0.15); /* 微微發光 */
+            box-shadow: 0 0 10px rgba(0, 230, 0, 0.15);
+            cursor: pointer; /* 變更游標為手型，提示可點擊 */
         }
         
-        /* 四角準心 (Corner Brackets) */
+        #preview-container:active {
+            opacity: 0.8; /* 點擊時有回饋感 */
+        }
+
         #preview-container::after {
             content: "";
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             border: 4px solid transparent;
-            /* 繪製四個角落 */
             background: 
                 linear-gradient(to right, var(--frame-color) 4px, transparent 4px) 0 0,
                 linear-gradient(to bottom, var(--frame-color) 4px, transparent 4px) 0 0,
@@ -115,9 +118,9 @@
                 linear-gradient(to left, var(--frame-color) 4px, transparent 4px) 100% 100%,
                 linear-gradient(to top, var(--frame-color) 4px, transparent 4px) 100% 100%;
             background-repeat: no-repeat;
-            background-size: 20px 20px; /* 角落大小 */
+            background-size: 20px 20px;
             pointer-events: none;
-            margin: 5px; /* 內縮一點點 */
+            margin: 5px;
         }
         
         .ratio-4-3 { aspect-ratio: 4/3; }
@@ -136,8 +139,11 @@
         #preview-img { width: 100%; height: 100%; object-fit: contain; display: none; z-index: 1; }
         .placeholder { color: #555; text-align: center; font-size: 0.9em; z-index: 0; font-weight: 500;}
 
+        /* --- 文字輸入框 (加長) --- */
         textarea { 
-            width: 100%; height: 120px; padding: 12px; border: 2px solid #eee; 
+            width: 100%; 
+            height: 220px; /* 修改：高度加長到 220px */
+            padding: 12px; border: 2px solid #eee; 
             border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; font-family: inherit;
             transition: border 0.3s;
         }
@@ -223,9 +229,9 @@
                 <button class="btn-half btn-gallery" onclick="triggerGallery()">🖼️ Gallery (相簿)</button>
             </div>
             
-            <div id="preview-container" class="ratio-4-3">
+            <div id="preview-container" class="ratio-4-3" onclick="triggerCam()" title="Click to take photo">
                 <div class="ratio-tag" id="ratio-display-tag">Ratio: 4:3</div>
-                <span class="placeholder">Green Frame indicates Crop Area<br>(綠框為實際裁切範圍)</span>
+                <span class="placeholder">Tap here to Take Photo<br>(點擊此處拍照)</span>
                 <img id="preview-img">
             </div>
             
@@ -372,7 +378,7 @@
         applySettings(); 
     }
 
-    // ================= 設定功能 (包含 ID 提取邏輯) =================
+    // ================= 設定功能 =================
     function openSettings() {
         loadSettingsToUI();
         document.getElementById('settings-modal').style.display = 'flex';
@@ -525,7 +531,7 @@
         }
     }
 
-    // ================= 語音功能 (即時顯示) =================
+    // ================= 語音功能 =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
@@ -636,6 +642,7 @@
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const folderId = localStorage.getItem("cfg_folder_id") || "";
+        
         const scriptId = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         const scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
 
