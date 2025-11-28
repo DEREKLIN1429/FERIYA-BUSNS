@@ -1,0 +1,52 @@
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    
+    // Default image text
+    var imageCell = "No Image (無圖片)";
+    var fileUrl = "";
+
+    // Image processing
+    if (data.image && data.image !== "") {
+      var folder = DriveApp.getRootFolder(); 
+      var contentType = data.image.substring(5, data.image.indexOf(';'));
+      var bytes = Utilities.base64Decode(data.image.substr(data.image.indexOf('base64,')+7));
+      
+      var fileName = "Photo_" + new Date().getTime() + ".png";
+      var blob = Utilities.newBlob(bytes, contentType, fileName);
+      var file = folder.createFile(blob);
+      
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      
+      var fileId = file.getId();
+      var directLink = "https://drive.google.com/uc?export=view&id=" + fileId;
+      
+      // Image formula for Column A
+      imageCell = '=IMAGE("' + directLink + '", 1)';
+      fileUrl = directLink;
+    }
+
+    var timestamp = new Date();
+    
+    // --------------------------------------------------------
+    // 修改寫入順序：Image 在第一位
+    // Change Order: Image is now first
+    // --------------------------------------------------------
+    sheet.appendRow([
+      imageCell,       // Col A: Image (圖片)
+      timestamp,       // Col B: Time (時間)
+      data.cost,       // Col C: Cost (成本)
+      data.discount,   // Col D: Discount (折扣)
+      data.finalPrice, // Col E: Final Price (折後金額)
+      data.savedAmount // Col F: Saved Amount (優惠金額)
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({"result":"success", "url": fileUrl}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": error.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
