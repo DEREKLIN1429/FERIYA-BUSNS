@@ -1,52 +1,323 @@
-function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    
-    // Default image text
-    var imageCell = "No Image (無圖片)";
-    var fileUrl = "";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Discount Recorder (商業折扣計算紀錄)</title>
+    <style>
+        /* 整體版面設定 */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            padding: 20px; 
+            margin: 0;
+            display: flex;
+            justify-content: center; 
+        }
 
-    // Image processing
-    if (data.image && data.image !== "") {
-      var folder = DriveApp.getRootFolder(); 
-      var contentType = data.image.substring(5, data.image.indexOf(';'));
-      var bytes = Utilities.base64Decode(data.image.substr(data.image.indexOf('base64,')+7));
-      
-      var fileName = "Photo_" + new Date().getTime() + ".png";
-      var blob = Utilities.newBlob(bytes, contentType, fileName);
-      var file = folder.createFile(blob);
-      
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      
-      var fileId = file.getId();
-      var directLink = "https://drive.google.com/uc?export=view&id=" + fileId;
-      
-      // Image formula for Column A
-      imageCell = '=IMAGE("' + directLink + '", 1)';
-      fileUrl = directLink;
+        .container { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            width: 100%;
+            max-width: 500px; /* 手機版面最佳寬度 */
+        }
+
+        h2 { 
+            text-align: center; 
+            color: #2c3e50; 
+            margin-bottom: 25px; 
+            font-size: 1.4rem; 
+            line-height: 1.4;
+        }
+
+        /* 輸入框區塊 */
+        .form-group { margin-bottom: 18px; }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: #34495e; 
+            font-size: 0.95rem;
+        }
+        
+        input[type="number"], input[type="text"] { 
+            width: 100%; 
+            padding: 12px 15px; 
+            border: 2px solid #e9ecef; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            box-sizing: border-box; 
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        
+        /* 唯讀結果欄位樣式 */
+        .result-field { 
+            background-color: #f8f9fa; 
+            color: #2c3e50; 
+            font-weight: bold; 
+            border-color: #dee2e6 !important;
+        }
+
+        /* 分隔線 */
+        hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
+
+        /* 按鈕群組 */
+        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
+        
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: 600; 
+            transition: transform 0.1s, opacity 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        button:active { transform: scale(0.98); }
+
+        /* 各種按鈕顏色 */
+        .btn-save { background-color: #007bff; color: white; } /* 藍色 - 存檔 */
+        .btn-view { background-color: #6c757d; color: white; } /* 灰色 - 檢視 */
+        .camera-btn { background-color: #ffc107; color: #333; } /* 黃色 - 相機 */
+        
+        button:disabled { 
+            background-color: #bdc3c7; 
+            cursor: not-allowed; 
+            transform: none; 
+            box-shadow: none;
+        }
+
+        /* 圖片預覽區 */
+        #preview-container { 
+            margin-top: 10px; 
+            text-align: center; 
+            border: 2px dashed #cbd5e0; 
+            padding: 15px; 
+            border-radius: 10px; 
+            min-height: 120px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+        }
+
+        #preview-img { 
+            max-width: 100%; 
+            max-height: 250px; 
+            display: none; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+        }
+        
+        /* 隱藏原本醜醜的檔案按鈕 */
+        input[type="file"] { display: none; }
+
+        /* 載入中文字 */
+        .loading { 
+            display: none; 
+            text-align: center; 
+            color: #007bff; 
+            margin-top: 15px; 
+            font-weight: bold; 
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Business Discount Recorder<br><span style="font-size: 0.7em; color: #7f8c8d; font-weight: normal;">(商業折扣計算紀錄)</span></h2>
+
+    <div class="form-group">
+        <label>1. Cost Amount (成本金額 $)</label>
+        <input type="number" id="cost" placeholder="Enter Cost (輸入成本)" oninput="calculate()">
+    </div>
+
+    <div class="form-group">
+        <label>2. Discount Rate (折扣 %)</label>
+        <input type="number" id="discount" placeholder="e.g., 20 (20% off)" oninput="calculate()">
+    </div>
+
+    <hr>
+
+    <div class="form-group">
+        <label>3. Final Price (折扣後金額 $)</label>
+        <input type="text" id="finalPrice" class="result-field" readonly placeholder="Auto Calculated (自動計算)">
+    </div>
+
+    <div class="form-group">
+        <label>4. Saved Amount (優惠金額 $)</label>
+        <input type="text" id="savedAmount" class="result-field" readonly placeholder="Auto Calculated (自動計算)">
+    </div>
+
+    <div class="form-group">
+        <label>5. Product Photo (商品拍照)</label>
+        <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">
+            📷 Open Camera / Select (開啟相機/選圖)
+        </button>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(this)">
+        
+        <div id="preview-container">
+            <span id="placeholder-text">No Image Selected<br>(尚未選擇圖片)</span>
+            <img id="preview-img" alt="Preview">
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn-save" id="saveBtn" onclick="saveToGoogle()">
+            💾 Save to Cloud (存檔至雲端)
+        </button>
+        <button type="button" class="btn-view" onclick="viewExcel()">
+            📊 View Excel (檢視 Excel)
+        </button>
+    </div>
+    
+    <div class="loading" id="loadingMsg">
+        Uploading Data to Cloud...<br>(資料上傳雲端中...)
+    </div>
+
+</div>
+
+<script>
+    // =========================================================
+    // 設定區域 (SETTINGS) - 請修改這裡！
+    // =========================================================
+    
+    // 1. Google Apps Script 部署網址 (Web App URL)
+    const SCRIPT_URL = '請在這裡貼上你的_APPS_SCRIPT_網址';
+    
+    // 2. Google Sheet 網址 (瀏覽器網址列上的連結)
+    const SHEET_VIEW_URL = '請在這裡貼上你的_GOOGLE_SHEET_網址';
+
+    // =========================================================
+
+    let base64Image = ""; // 用來暫存圖片資料
+
+    // --- 計算邏輯 (Auto Calculate) ---
+    function calculate() {
+        let cost = parseFloat(document.getElementById('cost').value);
+        let discount = parseFloat(document.getElementById('discount').value);
+
+        if (!isNaN(cost) && !isNaN(discount)) {
+            let final = cost * (1 - (discount / 100));
+            let saved = cost - final;
+
+            // 四捨五入取整數
+            document.getElementById('finalPrice').value = Math.round(final);
+            document.getElementById('savedAmount').value = Math.round(saved);
+        } else {
+            document.getElementById('finalPrice').value = "";
+            document.getElementById('savedAmount').value = "";
+        }
     }
 
-    var timestamp = new Date();
-    
-    // --------------------------------------------------------
-    // 修改寫入順序：Image 在第一位
-    // Change Order: Image is now first
-    // --------------------------------------------------------
-    sheet.appendRow([
-      imageCell,       // Col A: Image (圖片)
-      timestamp,       // Col B: Time (時間)
-      data.cost,       // Col C: Cost (成本)
-      data.discount,   // Col D: Discount (折扣)
-      data.finalPrice, // Col E: Final Price (折後金額)
-      data.savedAmount // Col F: Saved Amount (優惠金額)
-    ]);
+    // --- 圖片預覽 (Image Preview) ---
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                // 顯示圖片
+                document.getElementById('preview-img').src = e.target.result;
+                document.getElementById('preview-img').style.display = 'block';
+                document.getElementById('placeholder-text').style.display = 'none';
+                
+                // 儲存圖片資料給上傳用
+                base64Image = e.target.result; 
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
 
-    return ContentService.createTextOutput(JSON.stringify({"result":"success", "url": fileUrl}))
-      .setMimeType(ContentService.MimeType.JSON);
+    // --- 存檔至 Google (Save Function) ---
+    function saveToGoogle() {
+        let cost = document.getElementById('cost').value;
+        let discount = document.getElementById('discount').value;
+        let finalPrice = document.getElementById('finalPrice').value;
+        let savedAmount = document.getElementById('savedAmount').value;
 
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({"result":"error", "error": error.message}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        // 檢查必填
+        if(!cost || !discount) {
+            alert("Please enter Cost and Discount!\n(請先輸入成本與折扣！)");
+            return;
+        }
+
+        // 鎖定按鈕，避免重複點擊
+        document.getElementById('saveBtn').disabled = true;
+        document.getElementById('saveBtn').innerText = "Uploading... (上傳中...)";
+        document.getElementById('loadingMsg').style.display = 'block';
+
+        // 打包資料
+        let data = {
+            cost: cost,
+            discount: discount,
+            finalPrice: finalPrice,
+            savedAmount: savedAmount,
+            image: base64Image
+        };
+
+        // 發送到 Google Apps Script
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            alert("✅ Save Success!\n(存檔成功！)");
+            console.log(result);
+            resetForm(); // 清空表單
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("❌ Save Failed. Please check network.\n(存檔失敗，請檢查網路。)");
+        })
+        .finally(() => {
+            // 解鎖按鈕
+            document.getElementById('saveBtn').disabled = false;
+            document.getElementById('saveBtn').innerText = "💾 Save to Cloud (存檔至雲端)";
+            document.getElementById('loadingMsg').style.display = 'none';
+        });
+    }
+
+    // --- 檢視 Excel (View Function) ---
+    function viewExcel() {
+        if(SHEET_VIEW_URL.includes("http")) {
+            window.open(SHEET_VIEW_URL, '_blank');
+        } else {
+            alert("Please set the Google Sheet URL in code first.\n(請先在程式碼中設定 Google Sheet 網址！)");
+        }
+    }
+
+    // --- 重置表單 (Reset Function) ---
+    function resetForm() {
+        document.getElementById('cost').value = "";
+        document.getElementById('discount').value = "";
+        document.getElementById('finalPrice').value = "";
+        document.getElementById('savedAmount').value = "";
+        document.getElementById('cameraInput').value = ""; // 清空檔案選擇
+        document.getElementById('preview-img').style.display = 'none';
+        document.getElementById('preview-img').src = "";
+        document.getElementById('placeholder-text').style.display = 'block';
+        base64Image = "";
+    }
+</script>
+
+</body>
+</html>
