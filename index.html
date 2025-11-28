@@ -11,7 +11,7 @@
             --card-bg: #ffffff;
             --danger-color: #dc3545;
             --drive-color: #198754; 
-            --frame-color: #00e600; /* 亮綠色框架 */
+            --frame-color: #00e600; 
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -20,7 +20,6 @@
             display: flex; justify-content: center; height: 100vh;
         }
 
-        /* --- 登入畫面 --- */
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color); z-index: 9999;
@@ -35,7 +34,6 @@
             border-radius: 8px; font-size: 18px; text-align: center;
         }
 
-        /* --- 上傳狀態視窗 --- */
         #status-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;
@@ -56,7 +54,6 @@
             border-radius: 5px; margin-top: 15px; cursor: pointer; display: none; font-size: 16px;
         }
 
-        /* --- 主程式畫面 --- */
         #app-screen { display: none; width: 100%; max-width: 500px; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         
         .author-header {
@@ -85,7 +82,6 @@
         .btn-cam { background-color: #ffc107; color: #333; }
         .btn-gallery { background-color: #fd7e14; }
 
-        /* --- 圖片預覽框架 (可點擊) --- */
         #preview-container { 
             width: 100%; 
             background: #f0fff0; 
@@ -97,16 +93,12 @@
             box-sizing: border-box;
             transition: aspect-ratio 0.3s ease;
             box-shadow: 0 0 10px rgba(0, 230, 0, 0.15);
-            cursor: pointer; /* 變更游標為手型，提示可點擊 */
+            cursor: pointer;
         }
-        
-        #preview-container:active {
-            opacity: 0.8; /* 點擊時有回饋感 */
-        }
+        #preview-container:active { opacity: 0.8; }
 
         #preview-container::after {
-            content: "";
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             border: 4px solid transparent;
             background: 
                 linear-gradient(to right, var(--frame-color) 4px, transparent 4px) 0 0,
@@ -117,10 +109,7 @@
                 linear-gradient(to top, var(--frame-color) 4px, transparent 4px) 0 100%,
                 linear-gradient(to left, var(--frame-color) 4px, transparent 4px) 100% 100%,
                 linear-gradient(to top, var(--frame-color) 4px, transparent 4px) 100% 100%;
-            background-repeat: no-repeat;
-            background-size: 20px 20px;
-            pointer-events: none;
-            margin: 5px;
+            background-repeat: no-repeat; background-size: 20px 20px; pointer-events: none; margin: 5px;
         }
         
         .ratio-4-3 { aspect-ratio: 4/3; }
@@ -139,11 +128,8 @@
         #preview-img { width: 100%; height: 100%; object-fit: contain; display: none; z-index: 1; }
         .placeholder { color: #555; text-align: center; font-size: 0.9em; z-index: 0; font-weight: 500;}
 
-        /* --- 文字輸入框 (加長) --- */
         textarea { 
-            width: 100%; 
-            height: 220px; /* 修改：高度加長到 220px */
-            padding: 12px; border: 2px solid #eee; 
+            width: 100%; height: 220px; padding: 12px; border: 2px solid #eee; 
             border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; font-family: inherit;
             transition: border 0.3s;
         }
@@ -157,6 +143,17 @@
         .warning-mode { animation: flash-red 0.5s infinite; }
 
         .voice-controls { margin-top: 10px; }
+        
+        .quick-lang-container {
+            display: flex; justify-content: flex-end; align-items: center;
+            margin-bottom: 5px;
+        }
+        .lang-icon { font-size: 1.2em; margin-right: 5px; }
+        .small-select {
+            padding: 4px 8px; border: 1px solid #ccc; border-radius: 15px; 
+            font-size: 0.8rem; background-color: #fff; color: #555; outline: none;
+        }
+
         .btn-voice { 
             width: 100%; padding: 12px; border: none; border-radius: 8px; 
             background-color: #17a2b8; color: white; font-weight: bold; cursor: pointer;
@@ -242,7 +239,19 @@
         <div class="card" id="note-card">
             <span class="section-title">2. Note (文字/語音)</span>
             <textarea id="noteInput" placeholder="After taking a photo, type here or use voice... (拍照後，在此輸入或使用語音)"></textarea>
+            
             <div class="voice-controls">
+                
+                <div class="quick-lang-container">
+                    <span class="lang-icon">🌐</span>
+                    <select id="main-lang" class="small-select" onchange="syncLanguage('main')">
+                        <option value="cmn-Hant-TW">中文 (繁體)</option>
+                        <option value="en-US">English</option>
+                        <option value="ja-JP">日本語</option>
+                        <option value="hi-IN">हिन्दी (Hindi)</option>
+                    </select>
+                </div>
+
                 <button type="button" class="btn-voice" id="voiceBtn" onclick="toggleVoice()">
                     🎤 Start Voice (開始錄音)
                 </button>
@@ -283,10 +292,11 @@
 
             <div class="modal-group">
                 <label>3. Language (語音辨識語言)</label>
-                <select id="set-lang" class="modal-input">
+                <select id="set-lang" class="modal-input" onchange="syncLanguage('settings')">
                     <option value="cmn-Hant-TW">Traditional Chinese (繁體中文)</option>
                     <option value="en-US">English (英文)</option>
                     <option value="ja-JP">Japanese (日文)</option>
+                    <option value="hi-IN">Hindi (印地語)</option>
                 </select>
             </div>
 
@@ -303,21 +313,18 @@
             </div>
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
-                <label style="color:var(--primary-color);">5. Google Script ID (上傳程式碼 ID)</label>
+                <label style="color:var(--primary-color);">5. Google Script ID</label>
                 <input type="text" id="set-script-id" class="modal-input" placeholder="Paste ID or URL here">
-                <div class="hint-text">Found in Script URL: /macros/s/<b>[ID]</b>/exec</div>
             </div>
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
-                <label style="color:var(--primary-color);">6. Google Sheet ID (試算表 ID)</label>
+                <label style="color:var(--primary-color);">6. Google Sheet ID</label>
                 <input type="text" id="set-sheet-id" class="modal-input" placeholder="Paste ID or URL here">
-                <div class="hint-text">Found in Sheet URL: /d/<b>[ID]</b>/edit</div>
             </div>
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px;">
-                <label style="color:var(--primary-color);">7. Google Drive Folder ID (存檔資料夾 ID)</label>
+                <label style="color:var(--primary-color);">7. Google Drive Folder ID</label>
                 <input type="text" id="set-folder-id" class="modal-input" placeholder="Paste ID or URL here">
-                <div class="hint-text">Found in Drive URL: /folders/<b>[ID]</b></div>
             </div>
 
             <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
@@ -327,16 +334,18 @@
 <script>
     // ================= 初始化 =================
     const DEFAULT_PASS = "1234"; 
-    // 預設 ID
     const DEFAULT_SCRIPT_ID = "AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK";
     const DEFAULT_SHEET_ID = "1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA";
 
     let processedImageBase64 = ""; 
     let recognition;
-    let isRecording = false;
+    
+    // 錄音狀態與變數
+    let isRecording = false; // 是否在錄音模式中 (使用者認知的錄音狀態)
     let voiceTimer = null;         
     let countdownInterval = null;  
-    let textBeforeRec = "";
+    let timeLeft = 0; // 剩餘時間
+    let baseText = ""; // 錄音開始前的基準文字
 
     window.onload = function() {
         if(!localStorage.getItem("app_password")) {
@@ -378,7 +387,7 @@
         applySettings(); 
     }
 
-    // ================= 設定功能 =================
+    // ================= 設定功能 & 語言同步 =================
     function openSettings() {
         loadSettingsToUI();
         document.getElementById('settings-modal').style.display = 'flex';
@@ -387,6 +396,18 @@
         document.getElementById('settings-modal').style.display = 'none';
     }
     
+    function syncLanguage(source) {
+        let val;
+        if (source === 'main') {
+            val = document.getElementById('main-lang').value;
+            document.getElementById('set-lang').value = val;
+        } else {
+            val = document.getElementById('set-lang').value;
+            document.getElementById('main-lang').value = val;
+        }
+        localStorage.setItem("cfg_lang", val);
+    }
+
     function extractId(input) {
         if (!input) return "";
         input = input.trim();
@@ -409,7 +430,7 @@
         const newPass = document.getElementById('set-password').value;
         const timeout = document.getElementById('set-timeout').value;
         const warning = document.getElementById('set-warning').value;
-        const lang = document.getElementById('set-lang').value;
+        const lang = document.getElementById('set-lang').value; 
         const ratio = document.getElementById('set-ratio').value;
         
         const scriptId = extractId(document.getElementById('set-script-id').value);
@@ -426,6 +447,8 @@
         localStorage.setItem("cfg_script_id", scriptId);
         localStorage.setItem("cfg_sheet_id", sheetId);
         localStorage.setItem("cfg_folder_id", folderId); 
+        
+        document.getElementById('main-lang').value = lang;
 
         alert("Settings Saved!");
         closeSettings();
@@ -436,9 +459,12 @@
         document.getElementById('set-password').value = localStorage.getItem("app_password");
         document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('set-warning').value = localStorage.getItem("cfg_warning") || "3";
-        document.getElementById('set-lang').value = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
-        document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         
+        const savedLang = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
+        document.getElementById('set-lang').value = savedLang;
+        document.getElementById('main-lang').value = savedLang;
+
+        document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
         document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || "";
@@ -531,82 +557,112 @@
         }
     }
 
-    // ================= 語音功能 =================
+    // ================= 語音功能 (修正：重複問題 & 自動停止) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
         }
-        if (isRecording) stopVoice();
-        else startVoice();
+        if (isRecording) {
+            stopVoice(); // 手動停止
+        } else {
+            startVoice();
+        }
     }
     
     function startVoice() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
-        recognition.lang = localStorage.getItem("cfg_lang") || 'cmn-Hant-TW';
         
+        recognition.lang = document.getElementById('main-lang').value || 'cmn-Hant-TW';
         recognition.continuous = true; 
         recognition.interimResults = true; 
 
-        recognition.onstart = function() {
-            isRecording = true;
-            document.getElementById('voiceBtn').classList.add('recording');
-            document.getElementById('voiceBtn').innerText = "🛑 Stop";
-            
-            textBeforeRec = document.getElementById('noteInput').value;
+        // 初始化狀態
+        isRecording = true;
+        document.getElementById('voiceBtn').classList.add('recording');
+        document.getElementById('voiceBtn').innerText = "🛑 Stop";
+        
+        // 鎖定當前文字，作為基準
+        baseText = document.getElementById('noteInput').value;
 
-            const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
-            const warningSec = parseInt(localStorage.getItem("cfg_warning") || "3");
-            let timeLeft = timeoutSec;
-            
+        // 計時器設定
+        const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
+        const warningSec = parseInt(localStorage.getItem("cfg_warning") || "3");
+        timeLeft = timeoutSec;
+        
+        document.getElementById('display-timeout').innerText = timeLeft;
+        
+        // 清除舊計時器
+        if(countdownInterval) clearInterval(countdownInterval);
+
+        countdownInterval = setInterval(() => {
+            timeLeft--;
             document.getElementById('display-timeout').innerText = timeLeft;
-            
-            countdownInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('display-timeout').innerText = timeLeft;
 
-                if(timeLeft <= warningSec) {
-                    document.getElementById('noteInput').classList.add('warning-mode');
-                }
+            if(timeLeft <= warningSec) {
+                document.getElementById('noteInput').classList.add('warning-mode');
+            }
 
-                if(timeLeft <= 0) {
-                    stopVoice(); 
-                }
-            }, 1000);
-        };
-        
-        recognition.onend = function() {
-            if(isRecording) stopVoice(); 
-        };
-        
+            if(timeLeft <= 0) {
+                stopVoice(); // 時間到停止
+            }
+        }, 1000);
+
+        // 綁定事件
         recognition.onresult = function(event) {
             let interim_transcript = '';
-            let final_transcript = '';
+            let final_transcript = ''; // 這一段錄音的最終結果
 
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
+            // 遍歷所有結果 (因為 continuous=true，results 會包含過去的段落)
+            // 這裡的邏輯是：我們不累積 baseText，而是每次都用 (baseText + currentSessionFullText) 刷新
+            // 比較簡單的做法是：只抓取最新的結果並拼接
+            
+            // 為了避免重複，較好的做法是：
+            // 不要修改 baseText，而是每次 onresult 都重新計算 "這次錄音的總文字"
+            
+            let sessionFullText = ''; 
+
+            for (let i = 0; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
-                    final_transcript += event.results[i][0].transcript;
+                    sessionFullText += event.results[i][0].transcript;
                 } else {
                     interim_transcript += event.results[i][0].transcript;
                 }
             }
-            if (final_transcript) {
-                textBeforeRec += (textBeforeRec ? " " : "") + final_transcript;
-            }
+
+            // 更新顯示 = 基準文字 + (空格) + 這次錄音累積 + 臨時文字
             const noteArea = document.getElementById('noteInput');
-            noteArea.value = textBeforeRec + (interim_transcript ? (" " + interim_transcript) : "");
+            // 處理空格：如果 baseText 有東西，加空格
+            let prefix = baseText ? (baseText + " ") : "";
+            noteArea.value = prefix + sessionFullText + interim_transcript;
+            
             noteArea.scrollTop = noteArea.scrollHeight;
+        };
+
+        // 自動重啟機制 (解決 Android Chrome 自動斷線)
+        recognition.onend = function() {
+            if (isRecording && timeLeft > 0) {
+                // 如果還在錄音模式且時間沒到，代表是意外斷線 -> 重啟
+                // 重啟前，先把目前的文字設為新的 baseText，以免重複疊加
+                baseText = document.getElementById('noteInput').value;
+                recognition.start();
+            } else {
+                // 真的是要停止了
+                resetVoiceUI();
+            }
         };
         
         recognition.start();
     }
 
     function stopVoice() {
+        isRecording = false; // 標記為停止，阻止 onend 自動重啟
         if(recognition) recognition.stop();
-        isRecording = false;
-        
+        resetVoiceUI();
+    }
+
+    function resetVoiceUI() {
         if(countdownInterval) clearInterval(countdownInterval);
-        if(voiceTimer) clearTimeout(voiceTimer);
         
         document.getElementById('voiceBtn').classList.remove('recording');
         document.getElementById('voiceBtn').innerText = "🎤 Start Voice (開始錄音)";
@@ -642,7 +698,6 @@
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const folderId = localStorage.getItem("cfg_folder_id") || "";
-        
         const scriptId = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         const scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
 
