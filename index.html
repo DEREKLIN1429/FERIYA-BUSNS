@@ -137,22 +137,18 @@
         textarea:focus { border-color: var(--primary-color); outline: none; }
         
         /* --- 三階段閃爍動畫 --- */
-        
-        /* 1. 紅色 (緊急) - 0.5s 快閃 */
         @keyframes flash-red {
             0% { border-color: #eee; box-shadow: none; background-color: white; }
             50% { border-color: red; box-shadow: 0 0 15px rgba(255,0,0,0.6); background-color: #fff0f0; }
             100% { border-color: #eee; box-shadow: none; background-color: white; }
         }
         
-        /* 2. 紫色 (預警) - 1s 中速閃 */
         @keyframes flash-purple {
             0% { border-color: #eee; box-shadow: none; background-color: white; }
             50% { border-color: #a020f0; box-shadow: 0 0 10px rgba(160,32,240,0.4); background-color: #fcf0ff; }
             100% { border-color: #eee; box-shadow: none; background-color: white; }
         }
 
-        /* 3. 綠色 (正常) - 2s 慢速呼吸燈 */
         @keyframes flash-green {
             0% { border-color: #eee; box-shadow: none; }
             50% { border-color: #28a745; box-shadow: 0 0 8px rgba(40,167,69,0.3); }
@@ -366,6 +362,7 @@
     let isManualStop = false; 
     let voiceTimer = null;         
     let countdownInterval = null;  
+    let punctuationTimer = null; // 新增：標點符號計時器
     let timeLeft = 0; 
     let snapshotText = ""; 
 
@@ -572,7 +569,7 @@
         }
     }
 
-    // ================= 語音功能 (修正版：三階段閃爍) =================
+    // ================= 語音功能 (修正：自動標點 + 三階段閃爍 + 強制不中斷) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
@@ -592,20 +589,21 @@
         recognition.continuous = true; 
         recognition.interimResults = true; 
 
+        // 1. 初始化
         isRecording = true;
         isManualStop = false; 
         document.getElementById('voiceBtn').classList.add('recording');
         document.getElementById('voiceBtn').innerText = "🛑 Stop";
         
-        // 建立快照
+        // 2. 建立快照
         snapshotText = document.getElementById('noteInput').value;
         if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
             snapshotText += " ";
         }
 
+        // 3. 設定三階段倒數
         const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
         const warningSec = parseInt(localStorage.getItem("cfg_warning") || "3");
-        // 紫色開始時間點 (比紅色多5秒)
         const purpleSec = warningSec + 5; 
         
         timeLeft = timeoutSec;
@@ -621,10 +619,8 @@
             timeLeft--;
             document.getElementById('display-timeout').innerText = timeLeft;
 
-            // 清除所有動畫 class
             noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
 
-            // 依時間加入對應 class
             if(timeLeft <= warningSec) {
                 noteInput.classList.add('anim-red');
             } else if (timeLeft <= purpleSec) {
@@ -638,21 +634,50 @@
             }
         }, 1000);
 
+        // 4. 綁定辨識事件 (含智慧標點偵測)
         recognition.onresult = function(event) {
             let currentSessionText = ''; 
+            
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 currentSessionText += event.results[i][0].transcript;
             }
+
             const noteArea = document.getElementById('noteInput');
             noteArea.value = snapshotText + currentSessionText;
             noteArea.scrollTop = noteArea.scrollHeight;
+
+            // --- 智慧標點偵測邏輯 ---
+            if(punctuationTimer) clearTimeout(punctuationTimer);
+            
+            // 只有當真的有收到文字時才啟動偵測
+            if(currentSessionText.trim().length > 0) {
+                punctuationTimer = setTimeout(() => {
+                    // 停頓 1.2 秒後觸發
+                    let currentVal = noteArea.value.trim();
+                    const lang = document.getElementById('main-lang').value;
+                    let mark = "，";
+                    if(lang.includes('en')) mark = ", ";
+                    
+                    // 如果結尾還沒有標點，就加上去
+                    if(!currentVal.endsWith("，") && !currentVal.endsWith("。") && !currentVal.endsWith(",") && !currentVal.endsWith(".")) {
+                        noteArea.value = currentVal + mark;
+                        // 重要：標點加上後，要立刻更新快照，並重啟錄音以鎖定文字
+                        snapshotText = noteArea.value; 
+                        recognition.stop(); // 觸發 onend 進行自動重啟
+                    }
+                }, 1200);
+            }
         };
 
+        // 5. 強制不中斷 & 自動重啟邏輯
         recognition.onend = function() {
+            if(punctuationTimer) clearTimeout(punctuationTimer);
+
             if (isRecording && !isManualStop && timeLeft > 0) {
+                // 自動重啟 (包含標點符號觸發的重啟)
                 snapshotText = document.getElementById('noteInput').value;
                 if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
-                    snapshotText += " ";
+                    snapshotText += " "; // 補空白
                 }
                 recognition.start(); 
             } else {
@@ -676,11 +701,11 @@
 
     function resetVoiceUI() {
         if(countdownInterval) clearInterval(countdownInterval);
+        if(punctuationTimer) clearTimeout(punctuationTimer);
         
         document.getElementById('voiceBtn').classList.remove('recording');
         document.getElementById('voiceBtn').innerText = "🎤 Start Voice (開始錄音)";
         
-        // 移除所有動畫
         const noteInput = document.getElementById('noteInput');
         noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
         
