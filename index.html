@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Discount Recorder (商業折扣計算紀錄)</title>
+    <title>Business Discount Recorder</title>
     <style>
-        /* 整體版面設定 */
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             background-color: #f0f2f5; 
             padding: 20px; 
             margin: 0;
@@ -21,163 +20,95 @@
             border-radius: 16px; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
             width: 100%;
-            max-width: 500px; /* 手機版面最佳寬度 */
+            max-width: 500px;
         }
 
-        h2 { 
-            text-align: center; 
-            color: #2c3e50; 
-            margin-bottom: 25px; 
-            font-size: 1.4rem; 
-            line-height: 1.4;
-        }
-
-        /* 輸入框區塊 */
-        .form-group { margin-bottom: 18px; }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
         
-        label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: 600; 
-            color: #34495e; 
-            font-size: 0.95rem;
-        }
+        .form-group { margin-bottom: 18px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #34495e; }
         
         input[type="number"], input[type="text"] { 
-            width: 100%; 
-            padding: 12px 15px; 
-            border: 2px solid #e9ecef; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            transition: border-color 0.3s;
-        }
-
-        input[type="number"]:focus, input[type="text"]:focus {
-            border-color: #007bff;
-            outline: none;
+            width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; 
+            font-size: 16px; box-sizing: border-box; 
         }
         
-        /* 唯讀結果欄位樣式 */
-        .result-field { 
-            background-color: #f8f9fa; 
-            color: #2c3e50; 
-            font-weight: bold; 
-            border-color: #dee2e6 !important;
-        }
-
-        /* 分隔線 */
+        .result-field { background-color: #f8f9fa; color: #2c3e50; font-weight: bold; }
         hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
 
-        /* 按鈕群組 */
         .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
         
         button { 
-            width: 100%; 
-            padding: 14px; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            font-weight: 600; 
-            transition: transform 0.1s, opacity 0.2s; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            width: 100%; padding: 14px; border: none; border-radius: 10px; 
+            cursor: pointer; font-size: 16px; font-weight: 600; 
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         
-        button:active { transform: scale(0.98); }
-
-        /* 各種按鈕顏色 */
-        .btn-save { background-color: #007bff; color: white; } /* 藍色 - 存檔 */
-        .btn-view { background-color: #6c757d; color: white; } /* 灰色 - 檢視 */
-        .camera-btn { background-color: #ffc107; color: #333; } /* 黃色 - 相機 */
+        .btn-save { background-color: #007bff; color: white; }
+        .btn-view { background-color: #6c757d; color: white; }
+        .camera-btn { background-color: #ffc107; color: #333; }
         
-        button:disabled { 
-            background-color: #bdc3c7; 
-            cursor: not-allowed; 
-            transform: none; 
-            box-shadow: none;
-        }
-
         /* 圖片預覽區 */
         #preview-container { 
-            margin-top: 10px; 
-            text-align: center; 
-            border: 2px dashed #cbd5e0; 
-            padding: 15px; 
-            border-radius: 10px; 
-            min-height: 120px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            color: #7f8c8d;
+            margin-top: 10px; text-align: center; border: 2px dashed #cbd5e0; 
+            padding: 10px; border-radius: 10px; min-height: 120px; 
+            display: flex; align-items: center; justify-content: center; 
             background-color: #f8f9fa;
         }
-
-        #preview-img { 
-            max-width: 100%; 
-            max-height: 250px; 
-            display: none; 
-            border-radius: 8px; 
-            margin-top: 10px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
-        }
+        #preview-img { max-width: 100%; max-height: 250px; display: none; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
-        /* 隱藏原本醜醜的檔案按鈕 */
-        input[type="file"] { display: none; }
-
-        /* 載入中文字 */
-        .loading { 
-            display: none; 
-            text-align: center; 
-            color: #007bff; 
-            margin-top: 15px; 
-            font-weight: bold; 
-            font-size: 0.9rem;
+        /* --- 修正相機按鈕的關鍵 CSS --- */
+        /* 不使用 display: none，而是將它變透明並放到按鈕下方，確保能被觸發 */
+        #cameraInput {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+            width: 1px; 
+            height: 1px;
         }
+
+        .loading { display: none; text-align: center; color: #007bff; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Business Discount Recorder<br><span style="font-size: 0.7em; color: #7f8c8d; font-weight: normal;">(商業折扣計算紀錄)</span></h2>
+    <h2>Discount Recorder<br><span style="font-size: 0.7em; color: #7f8c8d; font-weight: normal;">(商業折扣計算紀錄)</span></h2>
 
     <div class="form-group">
-        <label>1. Cost Amount (成本金額 $)</label>
-        <input type="number" id="cost" placeholder="Enter Cost (輸入成本)" oninput="calculate()">
+        <label>1. Cost ($ 成本)</label>
+        <input type="number" id="cost" placeholder="Enter Cost" oninput="calculate()">
     </div>
 
     <div class="form-group">
-        <label>2. Discount Rate (折扣 %)</label>
-        <input type="number" id="discount" placeholder="e.g., 20 (20% off)" oninput="calculate()">
+        <label>2. Discount (% 折扣)</label>
+        <input type="number" id="discount" placeholder="e.g. 20" oninput="calculate()">
     </div>
 
     <hr>
 
     <div class="form-group">
-        <label>3. Final Price (折扣後金額 $)</label>
-        <input type="text" id="finalPrice" class="result-field" readonly placeholder="Auto Calculated (自動計算)">
+        <label>3. Final Price ($ 折後金額)</label>
+        <input type="text" id="finalPrice" class="result-field" readonly>
     </div>
 
     <div class="form-group">
-        <label>4. Saved Amount (優惠金額 $)</label>
-        <input type="text" id="savedAmount" class="result-field" readonly placeholder="Auto Calculated (自動計算)">
+        <label>4. Saved Amount ($ 優惠金額)</label>
+        <input type="text" id="savedAmount" class="result-field" readonly>
     </div>
 
     <div class="form-group">
-        <label>5. Product Photo (商品拍照)</label>
-        <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">
-            📷 Open Camera / Select (開啟相機/選圖)
+        <label>5. Photo (商品拍照)</label>
+        
+        <button type="button" class="camera-btn" onclick="triggerCamera()">
+            📷 Take Photo (拍照/選圖)
         </button>
+        
         <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(this)">
         
         <div id="preview-container">
-            <span id="placeholder-text">No Image Selected<br>(尚未選擇圖片)</span>
-            <img id="preview-img" alt="Preview">
+            <span id="placeholder-text" style="color:#aaa">No Image (無圖片)</span>
+            <img id="preview-img">
         </div>
     </div>
 
@@ -190,130 +121,94 @@
         </button>
     </div>
     
-    <div class="loading" id="loadingMsg">
-        Uploading Data to Cloud...<br>(資料上傳雲端中...)
-    </div>
-
+    <div class="loading" id="loadingMsg">Uploading... (上傳中...)</div>
 </div>
 
 <script>
-    // =========================================================
-    // 設定區域 (SETTINGS) - 請修改這裡！
-    // =========================================================
-    
-    // 1. Google Apps Script 部署網址 (Web App URL)
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK/exec';
-    
-    // 2. Google Sheet 網址 (瀏覽器網址列上的連結)
-    const SHEET_VIEW_URL = 'https://docs.google.com/spreadsheets/d/1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA/edit?gid=0#gid=0';
+    // ==========================================
+    // 請填入你的網址
+    const SCRIPT_URL = '請貼上你的_APPS_SCRIPT_網址';
+    const SHEET_VIEW_URL = '請貼上你的_GOOGLE_SHEET_網址';
+    // ==========================================
 
-    // =========================================================
+    let base64Image = "";
 
-    let base64Image = ""; // 用來暫存圖片資料
-
-    // --- 計算邏輯 (Auto Calculate) ---
     function calculate() {
         let cost = parseFloat(document.getElementById('cost').value);
         let discount = parseFloat(document.getElementById('discount').value);
-
         if (!isNaN(cost) && !isNaN(discount)) {
             let final = cost * (1 - (discount / 100));
-            let saved = cost - final;
-
-            // 四捨五入取整數
             document.getElementById('finalPrice').value = Math.round(final);
-            document.getElementById('savedAmount').value = Math.round(saved);
+            document.getElementById('savedAmount').value = Math.round(cost - final);
         } else {
             document.getElementById('finalPrice').value = "";
             document.getElementById('savedAmount').value = "";
         }
     }
 
-    // --- 圖片預覽 (Image Preview) ---
+    // 觸發相機的函式
+    function triggerCamera() {
+        document.getElementById('cameraInput').click();
+    }
+
     function previewImage(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
             reader.onload = function(e) {
-                // 顯示圖片
                 document.getElementById('preview-img').src = e.target.result;
                 document.getElementById('preview-img').style.display = 'block';
                 document.getElementById('placeholder-text').style.display = 'none';
-                
-                // 儲存圖片資料給上傳用
-                base64Image = e.target.result; 
+                base64Image = e.target.result;
             }
             reader.readAsDataURL(input.files[0]);
         }
     }
 
-    // --- 存檔至 Google (Save Function) ---
     function saveToGoogle() {
         let cost = document.getElementById('cost').value;
         let discount = document.getElementById('discount').value;
-        let finalPrice = document.getElementById('finalPrice').value;
-        let savedAmount = document.getElementById('savedAmount').value;
+        let final = document.getElementById('finalPrice').value;
+        let saved = document.getElementById('savedAmount').value;
 
-        // 檢查必填
         if(!cost || !discount) {
-            alert("Please enter Cost and Discount!\n(請先輸入成本與折扣！)");
-            return;
+            alert("Please enter data! (請輸入資料)"); return;
         }
 
-        // 鎖定按鈕，避免重複點擊
         document.getElementById('saveBtn').disabled = true;
-        document.getElementById('saveBtn').innerText = "Uploading... (上傳中...)";
+        document.getElementById('saveBtn').innerText = "Uploading...";
         document.getElementById('loadingMsg').style.display = 'block';
 
-        // 打包資料
-        let data = {
-            cost: cost,
-            discount: discount,
-            finalPrice: finalPrice,
-            savedAmount: savedAmount,
-            image: base64Image
-        };
+        let data = { cost: cost, discount: discount, finalPrice: final, savedAmount: saved, image: base64Image };
 
-        // 發送到 Google Apps Script
         fetch(SCRIPT_URL, {
             method: 'POST',
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
-        .then(result => {
-            alert("✅ Save Success!\n(存檔成功！)");
-            console.log(result);
-            resetForm(); // 清空表單
+        .then(r => r.json())
+        .then(res => {
+            alert("✅ Success! (成功)");
+            resetForm();
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("❌ Save Failed. Please check network.\n(存檔失敗，請檢查網路。)");
-        })
+        .catch(e => alert("❌ Error (錯誤)"))
         .finally(() => {
-            // 解鎖按鈕
             document.getElementById('saveBtn').disabled = false;
             document.getElementById('saveBtn').innerText = "💾 Save to Cloud (存檔至雲端)";
             document.getElementById('loadingMsg').style.display = 'none';
         });
     }
 
-    // --- 檢視 Excel (View Function) ---
     function viewExcel() {
-        if(SHEET_VIEW_URL.includes("http")) {
-            window.open(SHEET_VIEW_URL, '_blank');
-        } else {
-            alert("Please set the Google Sheet URL in code first.\n(請先在程式碼中設定 Google Sheet 網址！)");
-        }
+        if(SHEET_VIEW_URL.includes("http")) window.open(SHEET_VIEW_URL, '_blank');
+        else alert("Setup URL first! (請設定網址)");
     }
 
-    // --- 重置表單 (Reset Function) ---
     function resetForm() {
         document.getElementById('cost').value = "";
         document.getElementById('discount').value = "";
         document.getElementById('finalPrice').value = "";
         document.getElementById('savedAmount').value = "";
-        document.getElementById('cameraInput').value = ""; // 清空檔案選擇
+        document.getElementById('cameraInput').value = ""; 
         document.getElementById('preview-img').style.display = 'none';
-        document.getElementById('preview-img').src = "";
         document.getElementById('placeholder-text').style.display = 'block';
         base64Image = "";
     }
@@ -321,4 +216,3 @@
 
 </body>
 </html>
-
