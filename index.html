@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Discount Recorder</title>
+    <title>Photo & Voice Note (圖文語音紀錄)</title>
     <style>
         body { 
             font-family: 'Segoe UI', sans-serif; 
@@ -23,87 +23,89 @@
             max-width: 500px;
         }
 
-        h2 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
-        
-        .form-group { margin-bottom: 18px; position: relative; }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+
+        .form-group { margin-bottom: 20px; position: relative; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #34495e; }
-        
-        input[type="number"], input[type="text"] { 
-            width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; 
-            font-size: 16px; box-sizing: border-box; 
+
+        /* 文字輸入框樣式 */
+        textarea { 
+            width: 100%; 
+            height: 100px;
+            padding: 12px; 
+            border: 2px solid #e9ecef; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            box-sizing: border-box; 
+            resize: vertical; /* 允許垂直拉伸 */
+            font-family: inherit;
         }
         
-        .result-field { background-color: #f8f9fa; color: #2c3e50; font-weight: bold; }
+        textarea:focus { border-color: #007bff; outline: none; }
+
         hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
 
-        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
-        
+        /* 按鈕樣式 */
         button { 
             width: 100%; padding: 14px; border: none; border-radius: 10px; 
             cursor: pointer; font-size: 16px; font-weight: 600; 
             display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: 0.2s;
         }
-        
+
+        /* 按鈕顏色 */
+        .btn-voice { background-color: #17a2b8; color: white; margin-top: 5px; } /* 藍綠色 */
+        .btn-voice.listening { background-color: #dc3545; animation: pulse 1.5s infinite; } /* 錄音中變紅 */
+
         .btn-save { background-color: #007bff; color: white; }
         .btn-view { background-color: #6c757d; color: white; }
         .camera-btn { background-color: #ffc107; color: #333; }
-        
-        /* 圖片預覽區 */
+
+        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
+
+        /* 圖片預覽 */
         #preview-container { 
             margin-top: 10px; text-align: center; border: 2px dashed #cbd5e0; 
             padding: 10px; border-radius: 10px; min-height: 120px; 
             display: flex; align-items: center; justify-content: center; 
             background-color: #f8f9fa;
         }
-        #preview-img { max-width: 100%; max-height: 250px; display: none; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        
-        /* --- 修正相機按鈕的關鍵 CSS --- */
-        /* 不使用 display: none，而是將它變透明並放到按鈕下方，確保能被觸發 */
-        #cameraInput {
-            opacity: 0;
-            position: absolute;
-            z-index: -1;
-            width: 1px; 
-            height: 1px;
-        }
+        #preview-img { max-width: 100%; max-height: 250px; display: none; border-radius: 8px; }
 
+        /* 隱藏相機 input */
+        #cameraInput { opacity: 0; position: absolute; z-index: -1; width: 1px; height: 1px; }
+        
         .loading { display: none; text-align: center; color: #007bff; margin-top: 15px; font-weight: bold; }
+
+        /* 錄音動畫 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Discount Recorder<br><span style="font-size: 0.7em; color: #7f8c8d; font-weight: normal;">(商業折扣計算紀錄)</span></h2>
+    <h2>Photo & Voice Note<br><span style="font-size: 0.7em; color: #7f8c8d; font-weight: normal;">(圖文語音紀錄)</span></h2>
 
     <div class="form-group">
-        <label>1. Cost ($ 成本)</label>
-        <input type="number" id="cost" placeholder="Enter Cost" oninput="calculate()">
-    </div>
-
-    <div class="form-group">
-        <label>2. Discount (% 折扣)</label>
-        <input type="number" id="discount" placeholder="e.g. 20" oninput="calculate()">
+        <label>1. Description / Note (文字備註)</label>
+        <textarea id="noteInput" placeholder="Type here or use voice input... (在此輸入或使用語音)"></textarea>
+        
+        <button type="button" class="btn-voice" id="voiceBtn" onclick="toggleVoice()">
+            🎤 Tap to Speak (按我說話輸入)
+        </button>
     </div>
 
     <hr>
 
     <div class="form-group">
-        <label>3. Final Price ($ 折後金額)</label>
-        <input type="text" id="finalPrice" class="result-field" readonly>
-    </div>
-
-    <div class="form-group">
-        <label>4. Saved Amount ($ 優惠金額)</label>
-        <input type="text" id="savedAmount" class="result-field" readonly>
-    </div>
-
-    <div class="form-group">
-        <label>5. Photo (商品拍照)</label>
-        
-        <button type="button" class="camera-btn" onclick="triggerCamera()">
+        <label>2. Photo (照片)</label>
+        <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">
             📷 Take Photo (拍照/選圖)
         </button>
-        
         <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(this)">
         
         <div id="preview-container">
@@ -127,30 +129,71 @@
 <script>
     // ==========================================
     // 請填入你的網址
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK/exec';
-    const SHEET_VIEW_URL = 'https://docs.google.com/spreadsheets/d/1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA/edit?gid=0#gid=0';
+    const SCRIPT_URL = '請貼上你的_APPS_SCRIPT_網址';
+    const SHEET_VIEW_URL = '請貼上你的_GOOGLE_SHEET_網址';
     // ==========================================
 
     let base64Image = "";
+    
+    // --- 語音辨識功能 (Speech to Text) ---
+    let recognition;
+    let isListening = false;
 
-    function calculate() {
-        let cost = parseFloat(document.getElementById('cost').value);
-        let discount = parseFloat(document.getElementById('discount').value);
-        if (!isNaN(cost) && !isNaN(discount)) {
-            let final = cost * (1 - (discount / 100));
-            document.getElementById('finalPrice').value = Math.round(final);
-            document.getElementById('savedAmount').value = Math.round(cost - final);
+    // 檢查瀏覽器是否支援語音
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false; // 講完一句自動停止
+        recognition.interimResults = false; // 不顯示中間過程，只顯示最終結果
+        
+        // 設定語言 (自動偵測 或設定為 'cmn-Hant-TW' 中文)
+        recognition.lang = 'cmn-Hant-TW'; // 預設繁體中文，也可改 'en-US'
+
+        recognition.onstart = function() {
+            isListening = true;
+            const btn = document.getElementById('voiceBtn');
+            btn.innerText = "🔴 Listening... (聽寫中...)";
+            btn.classList.add('listening');
+        };
+
+        recognition.onend = function() {
+            isListening = false;
+            const btn = document.getElementById('voiceBtn');
+            btn.innerText = "🎤 Tap to Speak (按我說話輸入)";
+            btn.classList.remove('listening');
+        };
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            const noteArea = document.getElementById('noteInput');
+            
+            // 將語音內容附加到現有文字後方 (加個空格)
+            if(noteArea.value.length > 0) {
+                noteArea.value += " " + transcript;
+            } else {
+                noteArea.value = transcript;
+            }
+        };
+
+        recognition.onerror = function(event) {
+            alert("Voice Error: " + event.error);
+            isListening = false;
+        };
+    } else {
+        document.getElementById('voiceBtn').style.display = 'none'; //如果不支援就隱藏按鈕
+        alert("Your browser does not support voice input. Please use Chrome/Safari.\n(瀏覽器不支援語音，請用 Chrome 或 Safari)");
+    }
+
+    function toggleVoice() {
+        if (!recognition) return;
+        if (isListening) {
+            recognition.stop();
         } else {
-            document.getElementById('finalPrice').value = "";
-            document.getElementById('savedAmount').value = "";
+            recognition.start();
         }
     }
 
-    // 觸發相機的函式
-    function triggerCamera() {
-        document.getElementById('cameraInput').click();
-    }
-
+    // --- 圖片預覽 ---
     function previewImage(input) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
@@ -164,21 +207,24 @@
         }
     }
 
+    // --- 存檔 ---
     function saveToGoogle() {
-        let cost = document.getElementById('cost').value;
-        let discount = document.getElementById('discount').value;
-        let final = document.getElementById('finalPrice').value;
-        let saved = document.getElementById('savedAmount').value;
+        let note = document.getElementById('noteInput').value;
 
-        if(!cost || !discount) {
-            alert("Please enter data! (請輸入資料)"); return;
+        // 雖然不是必填，但如果有填會更好
+        if(note === "" && base64Image === "") {
+            alert("Please enter text or take a photo!\n(請輸入文字或拍照！)");
+            return;
         }
 
         document.getElementById('saveBtn').disabled = true;
         document.getElementById('saveBtn').innerText = "Uploading...";
         document.getElementById('loadingMsg').style.display = 'block';
 
-        let data = { cost: cost, discount: discount, finalPrice: final, savedAmount: saved, image: base64Image };
+        let data = { 
+            note: note,  // 傳送文字
+            image: base64Image // 傳送圖片
+        };
 
         fetch(SCRIPT_URL, {
             method: 'POST',
@@ -186,10 +232,13 @@
         })
         .then(r => r.json())
         .then(res => {
-            alert("✅ Success! (成功)");
+            alert("✅ Saved! (已存檔)");
             resetForm();
         })
-        .catch(e => alert("❌ Error (錯誤)"))
+        .catch(e => {
+            console.error(e);
+            alert("❌ Error (錯誤)");
+        })
         .finally(() => {
             document.getElementById('saveBtn').disabled = false;
             document.getElementById('saveBtn').innerText = "💾 Save to Cloud (存檔至雲端)";
@@ -203,10 +252,7 @@
     }
 
     function resetForm() {
-        document.getElementById('cost').value = "";
-        document.getElementById('discount').value = "";
-        document.getElementById('finalPrice').value = "";
-        document.getElementById('savedAmount').value = "";
+        document.getElementById('noteInput').value = "";
         document.getElementById('cameraInput').value = ""; 
         document.getElementById('preview-img').style.display = 'none';
         document.getElementById('placeholder-text').style.display = 'block';
@@ -216,4 +262,3 @@
 
 </body>
 </html>
-
