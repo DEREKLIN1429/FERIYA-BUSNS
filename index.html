@@ -20,7 +20,6 @@
             display: flex; justify-content: center; height: 100vh;
         }
 
-        /* --- 登入畫面 --- */
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color); z-index: 9999;
@@ -35,7 +34,6 @@
             border-radius: 8px; font-size: 18px; text-align: center;
         }
 
-        /* --- 上傳狀態視窗 --- */
         #status-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;
@@ -56,7 +54,6 @@
             border-radius: 5px; margin-top: 15px; cursor: pointer; display: none; font-size: 16px;
         }
 
-        /* --- 主程式畫面 --- */
         #app-screen { display: none; width: 100%; max-width: 500px; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         
         .author-header {
@@ -85,7 +82,6 @@
         .btn-cam { background-color: #ffc107; color: #333; }
         .btn-gallery { background-color: #fd7e14; }
 
-        /* --- 圖片預覽框架 --- */
         #preview-container { 
             width: 100%; 
             background: #f0fff0; 
@@ -99,7 +95,6 @@
             box-shadow: 0 0 10px rgba(0, 230, 0, 0.15);
             cursor: pointer;
         }
-        
         #preview-container:active { opacity: 0.8; }
 
         #preview-container::after {
@@ -347,10 +342,11 @@
     
     // 錄音狀態
     let isRecording = false; 
+    let isManualStop = false; // 新增：是否手動停止的標記
     let voiceTimer = null;         
     let countdownInterval = null;  
     let timeLeft = 0; 
-    let preExistingText = ""; // 修正關鍵：錄音開始前的文字快照
+    let snapshotText = ""; // 關鍵：文字快照，用來避免重複
 
     window.onload = function() {
         if(!localStorage.getItem("app_password")) {
@@ -463,11 +459,9 @@
         document.getElementById('set-password').value = localStorage.getItem("app_password");
         document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('set-warning').value = localStorage.getItem("cfg_warning") || "3";
-        
         const savedLang = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
         document.getElementById('set-lang').value = savedLang;
         document.getElementById('main-lang').value = savedLang;
-
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
@@ -477,7 +471,6 @@
     function applySettings() {
         const timeout = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('display-timeout').innerText = timeout;
-        
         const ratio = localStorage.getItem("cfg_ratio") || "4/3";
         const container = document.getElementById('preview-container');
         const tag = document.getElementById('ratio-display-tag');
@@ -491,11 +484,8 @@
         else if(ratio === "1/1") container.classList.add("ratio-1-1");
         else if(ratio === "FULL") container.classList.add("ratio-full");
         
-        if(ratio === "FULL") {
-             tag.innerText = "Ratio: Full (Original)";
-        } else {
-             tag.innerText = "Ratio: " + ratio.replace("/", ":");
-        }
+        if(ratio === "FULL") tag.innerText = "Ratio: Full (Original)";
+        else tag.innerText = "Ratio: " + ratio.replace("/", ":");
     }
 
     // ================= 圖片處理 =================
@@ -561,13 +551,13 @@
         }
     }
 
-    // ================= 語音功能 (修正版：解決重複與斷線) =================
+    // ================= 語音功能 (修正：重複文字 & 強制不中斷) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
         }
         if (isRecording) {
-            manualStopVoice(); // 使用者手動停止
+            manualStopVoice(); // 只有按按鈕才能停止
         } else {
             startVoice();
         }
@@ -581,13 +571,18 @@
         recognition.continuous = true; 
         recognition.interimResults = true; 
 
-        // 1. 初始化狀態與計時器
+        // 1. 初始化
         isRecording = true;
+        isManualStop = false; // 重置手動停止旗標
         document.getElementById('voiceBtn').classList.add('recording');
         document.getElementById('voiceBtn').innerText = "🛑 Stop";
         
-        // 2. 記錄目前已經存在的文字 (快照)
-        preExistingText = document.getElementById('noteInput').value;
+        // 2. 建立文字快照：記錄目前的文字，之後只會「往後加」
+        snapshotText = document.getElementById('noteInput').value;
+        // 如果快照有文字但沒空格，補一個空格
+        if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
+            snapshotText += " ";
+        }
 
         // 3. 設定倒數
         const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
@@ -607,47 +602,51 @@
             }
 
             if(timeLeft <= 0) {
-                manualStopVoice(); // 時間到，執行完整停止
+                manualStopVoice(); // 時間到才停止
             }
         }, 1000);
 
         // 4. 綁定辨識事件
         recognition.onresult = function(event) {
-            let sessionText = ''; 
+            let currentSessionText = ''; 
             
-            // 遍歷當前 Session 的所有結果
-            for (let i = 0; i < event.results.length; ++i) {
-                sessionText += event.results[i][0].transcript;
+            // 抓取這次 startVoice() 以後的所有話
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                currentSessionText += event.results[i][0].transcript;
             }
 
-            // 5. 更新顯示：舊快照 + 當前 Session 新文字
-            // 注意：這裡不 +=，而是直接重新賦值，避免重複累加
+            // 5. 更新顯示：快照 + 這次說的話 (絕對不會重複)
             const noteArea = document.getElementById('noteInput');
-            
-            let separator = (preExistingText && !preExistingText.endsWith(" ")) ? " " : "";
-            noteArea.value = preExistingText + separator + sessionText;
-            
+            noteArea.value = snapshotText + currentSessionText;
             noteArea.scrollTop = noteArea.scrollHeight;
         };
 
-        // 6. 自動重啟機制 (解決 Android Chrome 自動斷線)
+        // 6. 強制不中斷邏輯
         recognition.onend = function() {
-            if (isRecording && timeLeft > 0) {
-                // 如果時間還沒到卻斷線了，代表是系統強制中斷 -> 自動重啟
-                // 重啟前，更新快照為「目前為止的所有文字」
-                preExistingText = document.getElementById('noteInput').value;
-                recognition.start();
+            // 如果還在錄音模式 (時間未到) 且 不是手動停止
+            if (isRecording && !isManualStop && timeLeft > 0) {
+                // 自動重啟：更新快照為目前最新的內容
+                snapshotText = document.getElementById('noteInput').value;
+                if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
+                    snapshotText += " ";
+                }
+                recognition.start(); // 立即重啟
             } else {
-                // 真的要停止了
+                // 真的停止
                 resetVoiceUI();
             }
         };
         
-        recognition.start();
+        try {
+            recognition.start();
+        } catch(e) {
+            console.error("Start error", e);
+        }
     }
 
     function manualStopVoice() {
-        isRecording = false; // 標記為手動停止，阻止 onend 自動重啟
+        isRecording = false; 
+        isManualStop = true; // 標記為手動停止，阻止 onend 自動重啟
         if(recognition) recognition.stop();
         resetVoiceUI();
     }
