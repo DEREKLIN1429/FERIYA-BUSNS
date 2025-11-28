@@ -3,260 +3,487 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photo & Voice Note (圖文語音紀錄)</title>
+    <title>Smart Recorder Pro</title>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+        }
         body { 
             font-family: 'Segoe UI', sans-serif; 
-            background-color: #f0f2f5; 
-            padding: 20px; 
-            margin: 0;
-            display: flex;
-            justify-content: center; 
+            background-color: var(--bg-color); 
+            margin: 0; padding: 0;
+            display: flex; justify-content: center; height: 100vh;
         }
 
-        .container { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 16px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-            width: 100%;
-            max-width: 500px;
+        /* --- 登入畫面 --- */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .login-box {
+            background: white; padding: 30px; border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 300px;
+        }
+        .login-input {
+            width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd;
+            border-radius: 8px; font-size: 18px; text-align: center;
         }
 
-        h2 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
-
-        .form-group { margin-bottom: 20px; position: relative; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #34495e; }
-
-        /* 文字輸入框樣式 */
-        textarea { 
-            width: 100%; 
-            height: 100px;
-            padding: 12px; 
-            border: 2px solid #e9ecef; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            box-sizing: border-box; 
-            resize: vertical; 
-            font-family: inherit;
-        }
+        /* --- 主程式畫面 --- */
+        #app-screen { display: none; width: 100%; max-width: 500px; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         
-        textarea:focus { border-color: #007bff; outline: none; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h2 { margin: 0; color: #333; font-size: 1.4rem; }
+        .settings-icon { font-size: 24px; cursor: pointer; color: #555; padding: 5px; }
 
-        hr { border: 0; border-top: 1px solid #eee; margin: 25px 0; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .section-title { font-weight: bold; color: #555; margin-bottom: 10px; display: block; }
 
-        /* 按鈕樣式 */
-        button { 
-            width: 100%; padding: 14px; border: none; border-radius: 10px; 
-            cursor: pointer; font-size: 16px; font-weight: 600; 
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            transition: 0.2s;
-        }
+        /* --- 1. 圖片區 (上方) --- */
+        .photo-controls { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-half { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 5px;}
+        .btn-cam { background-color: #ffc107; color: #333; }
+        .btn-gallery { background-color: #fd7e14; }
 
-        /* 按鈕顏色 */
-        .btn-voice { background-color: #17a2b8; color: white; margin-top: 5px; } 
-        .btn-voice.listening { background-color: #dc3545; animation: pulse 1.5s infinite; } 
-
-        .btn-save { background-color: #007bff; color: white; }
-        .btn-view { background-color: #6c757d; color: white; }
-        .camera-btn { background-color: #ffc107; color: #333; }
-
-        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
-
-        /* 圖片預覽 */
         #preview-container { 
-            margin-top: 10px; text-align: center; border: 2px dashed #cbd5e0; 
-            padding: 10px; border-radius: 10px; min-height: 120px; 
-            display: flex; align-items: center; justify-content: center; 
-            background-color: #f8f9fa;
+            width: 100%; background: #eee; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            position: relative;
         }
-        #preview-img { max-width: 100%; max-height: 250px; display: none; border-radius: 8px; }
-
-        /* 隱藏相機 input */
-        #cameraInput { opacity: 0; position: absolute; z-index: -1; width: 1px; height: 1px; }
+        /* 預設 4:3 比例 */
+        .ratio-4-3 { aspect-ratio: 4/3; }
+        .ratio-16-9 { aspect-ratio: 16/9; }
         
-        .loading { display: none; text-align: center; color: #007bff; margin-top: 15px; font-weight: bold; }
+        #preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .placeholder { color: #aaa; }
 
-        /* 錄音動畫 */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
+        /* --- 2. 文字/語音區 (下方) --- */
+        textarea { 
+            width: 100%; height: 120px; padding: 12px; border: 2px solid #eee; 
+            border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; font-family: inherit;
         }
+        textarea:focus { border-color: var(--primary-color); outline: none; }
+        
+        .voice-controls { margin-top: 10px; }
+        .btn-voice { 
+            width: 100%; padding: 12px; border: none; border-radius: 8px; 
+            background-color: #17a2b8; color: white; font-weight: bold; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .btn-voice.recording { background-color: #dc3545; animation: pulse 1s infinite; }
+
+        /* --- 底部按鈕 --- */
+        .footer-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-bottom: 20px;}
+        .btn-main { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-save { background-color: var(--primary-color); }
+        .btn-view { background-color: #6c757d; }
+
+        /* --- 設定彈窗 (Modal) --- */
+        #settings-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 400px; padding: 20px; 
+            border-radius: 15px; max-height: 80vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .modal-group { margin-bottom: 15px; }
+        .modal-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333; }
+        .modal-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;}
+        select.modal-input { background: white; }
+
+        /* 動畫 */
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        .hidden { display: none !important; }
+        .loading { text-align: center; color: var(--primary-color); font-weight: bold; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Photo & Voice Note<br><span style="font-size: 0.7em; color: #7f8c8d; font-weight: normal;">(圖文語音紀錄)</span></h2>
-
-    <div class="form-group">
-        <label>1. Description / Note (文字備註)</label>
-        <textarea id="noteInput" placeholder="Type here or use voice input... (在此輸入或使用語音)"></textarea>
-        
-        <button type="button" class="btn-voice" id="voiceBtn" onclick="toggleVoice()">
-            🎤 Tap to Speak (按我說話輸入)
-        </button>
-    </div>
-
-    <hr>
-
-    <div class="form-group">
-        <label>2. Photo (照片)</label>
-        <button type="button" class="camera-btn" onclick="document.getElementById('cameraInput').click()">
-            📷 Take Photo (拍照/選圖)
-        </button>
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="previewImage(this)">
-        
-        <div id="preview-container">
-            <span id="placeholder-text" style="color:#aaa">No Image (無圖片)</span>
-            <img id="preview-img">
+    <div id="login-screen">
+        <div class="login-box">
+            <h3>🔒 Login (登入)</h3>
+            <p style="color:#666; font-size:0.9em;">Please enter password<br>預設密碼: 1234</p>
+            <input type="password" id="loginPass" class="login-input" placeholder="Password">
+            <button class="btn-main btn-save" onclick="checkLogin()">Login (進入)</button>
         </div>
     </div>
 
-    <div class="btn-group">
-        <button type="button" class="btn-save" id="saveBtn" onclick="saveToGoogle()">
-            💾 Save to Cloud (存檔至雲端)
-        </button>
-        <button type="button" class="btn-view" onclick="viewExcel()">
-            📊 View Excel (檢視 Excel)
-        </button>
+    <div id="app-screen">
+        <div class="header">
+            <div>
+                <h2>Recorder Pro</h2>
+                <span style="font-size:0.8em; color:#888;">Photo first, then Note</span>
+            </div>
+            <div class="settings-icon" onclick="openSettings()">⚙️</div>
+        </div>
+
+        <div class="card">
+            <span class="section-title">1. Photo (圖片紀錄)</span>
+            
+            <div class="photo-controls">
+                <button class="btn-half btn-cam" onclick="triggerCam()">📷 Camera</button>
+                <button class="btn-half btn-gallery" onclick="triggerGallery()">🖼️ Gallery</button>
+            </div>
+
+            <div id="preview-container" class="ratio-4-3">
+                <span class="placeholder">No Image (尚無圖片)</span>
+                <img id="preview-img">
+            </div>
+
+            <input type="file" id="input-cam" accept="image/*" capture="environment" class="hidden" onchange="handleFile(this)">
+            <input type="file" id="input-gallery" accept="image/*" class="hidden" onchange="handleFile(this)">
+        </div>
+
+        <div class="card">
+            <span class="section-title">2. Note (文字/語音)</span>
+            <textarea id="noteInput" placeholder="After taking a photo, type here or use voice... (拍照後，在此輸入或使用語音)"></textarea>
+            
+            <div class="voice-controls">
+                <button type="button" class="btn-voice" id="voiceBtn" onclick="toggleVoice()">
+                    🎤 Start Voice (開始錄音)
+                </button>
+                <div style="text-align: right; font-size: 0.8em; color: #888; margin-top: 5px;">
+                    Auto-stop in <span id="display-timeout">10</span>s (自動停止)
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-btns">
+            <button class="btn-main btn-save" id="saveBtn" onclick="saveToCloud()">💾 Save to Cloud (存檔至雲端)</button>
+            <button class="btn-main btn-view" onclick="viewExcel()">📊 View Excel (檢視 Excel)</button>
+        </div>
+        <div class="loading" id="loadingMsg">Uploading... (資料上傳中...)</div>
     </div>
-    
-    <div class="loading" id="loadingMsg">Uploading... (上傳中...)</div>
-</div>
+
+    <div id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings (設定)</h3>
+                <button onclick="closeSettings()" style="background:none; border:none; font-size:1.5rem;">&times;</button>
+            </div>
+
+            <div class="modal-group">
+                <label>1. Voice Timeout (錄音停止時間 / 秒)</label>
+                <input type="number" id="set-timeout" class="modal-input" value="10">
+            </div>
+
+            <div class="modal-group">
+                <label>2. Language (語音辨識語言)</label>
+                <select id="set-lang" class="modal-input">
+                    <option value="cmn-Hant-TW">Traditional Chinese (繁體中文)</option>
+                    <option value="en-US">English (英文)</option>
+                    <option value="ja-JP">Japanese (日文)</option>
+                </select>
+            </div>
+
+            <div class="modal-group">
+                <label>3. Photo Aspect Ratio (照片比例)</label>
+                <select id="set-ratio" class="modal-input">
+                    <option value="4/3">4:3 (Standard)</option>
+                    <option value="16/9">16:9 (Wide)</option>
+                    <option value="1/1">1:1 (Square)</option>
+                </select>
+            </div>
+
+            <div class="modal-group">
+                <label>4. Upload URL (Google Script 上傳網址)</label>
+                <input type="text" id="set-script-url" class="modal-input" style="font-size:0.8em;">
+            </div>
+
+            <div class="modal-group">
+                <label>5. View URL (Google Sheet 檢視網址)</label>
+                <input type="text" id="set-view-url" class="modal-input" style="font-size:0.8em;">
+            </div>
+
+            <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
+        </div>
+    </div>
 
 <script>
-    // ==========================================
-    // 這裡是你指定的網址 (已自動歸位)
-    // ==========================================
-    
-    // Google Script 網址 (負責上傳資料) -> 結尾是 exec
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK/exec';
-    
-    // Google Sheet 網址 (負責檢視表格) -> 結尾是 edit...
-    const SHEET_VIEW_URL = 'https://docs.google.com/spreadsheets/d/1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA/edit?gid=0#gid=0';
-    
-    // ==========================================
+    // ================= 初始化變數 =================
+    // 預設密碼 (可在此修改)
+    const DEFAULT_PASS = "1234"; 
 
-    let base64Image = "";
-    
-    // --- 語音辨識功能 (Speech to Text) ---
+    // 預設網址 (使用者提供)
+    const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK/exec";
+    const DEFAULT_VIEW_URL = "https://docs.google.com/spreadsheets/d/1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA/edit?gid=0#gid=0";
+
+    // 狀態變數
+    let processedImageBase64 = ""; // 最終要上傳的圖片
     let recognition;
-    let isListening = false;
+    let isRecording = false;
+    let voiceTimer = null;
 
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    // ================= 1. 登入與啟動邏輯 =================
+
+    window.onload = function() {
+        // 檢查是否登入過 (使用 LocalStorage)
+        const isLoggedIn = localStorage.getItem("isLoggedIn");
+        if(isLoggedIn === "true") {
+            showApp();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+        
+        // 載入設定
+        loadSettingsToUI();
+    };
+
+    function checkLogin() {
+        const input = document.getElementById('loginPass').value;
+        if(input === DEFAULT_PASS) {
+            localStorage.setItem("isLoggedIn", "true"); // 記住登入狀態
+            showApp();
+        } else {
+            alert("Wrong Password! (密碼錯誤)");
+        }
+    }
+
+    function showApp() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-screen').style.display = 'block';
+        applySettings(); // 應用設定 (如圖片比例)
+    }
+
+    // ================= 2. 設定功能 (Settings) =================
+
+    function openSettings() {
+        // 打開時，確保 UI 顯示的是目前存的值
+        loadSettingsToUI();
+        document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function closeSettings() {
+        document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    function saveSettings() {
+        // 取得 UI 值
+        const timeout = document.getElementById('set-timeout').value;
+        const lang = document.getElementById('set-lang').value;
+        const ratio = document.getElementById('set-ratio').value;
+        const scriptUrl = document.getElementById('set-script-url').value;
+        const viewUrl = document.getElementById('set-view-url').value;
+
+        // 存入 LocalStorage
+        localStorage.setItem("cfg_timeout", timeout);
+        localStorage.setItem("cfg_lang", lang);
+        localStorage.setItem("cfg_ratio", ratio);
+        localStorage.setItem("cfg_script_url", scriptUrl);
+        localStorage.setItem("cfg_view_url", viewUrl);
+
+        alert("Settings Saved! (設定已儲存)");
+        closeSettings();
+        applySettings(); // 立即生效
+    }
+
+    function loadSettingsToUI() {
+        // 從 LocalStorage 讀取，如果沒有就用預設值
+        document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "10";
+        document.getElementById('set-lang').value = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
+        document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
+        document.getElementById('set-script-url').value = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
+        document.getElementById('set-view-url').value = localStorage.getItem("cfg_view_url") || DEFAULT_VIEW_URL;
+    }
+
+    function applySettings() {
+        // 更新 UI 顯示
+        const timeout = localStorage.getItem("cfg_timeout") || "10";
+        document.getElementById('display-timeout').innerText = timeout;
+
+        // 更新圖片容器比例
+        const ratio = localStorage.getItem("cfg_ratio") || "4/3";
+        const container = document.getElementById('preview-container');
+        container.className = ""; // 清除舊 class
+        if(ratio === "4/3") container.classList.add("ratio-4-3");
+        else if(ratio === "16/9") container.classList.add("ratio-16-9");
+        else container.style.aspectRatio = "1/1";
+        
+        // 如果已經有圖片，重新處理裁切
+        // (這裡簡化處理，使用者重新選圖時才會觸發 Canvas 裁切)
+    }
+
+    // ================= 3. 圖片處理 (含裁切) =================
+
+    function triggerCam() { document.getElementById('input-cam').click(); }
+    function triggerGallery() { document.getElementById('input-gallery').click(); }
+
+    function handleFile(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // 先顯示在 img 標籤 (原始圖)
+                const img = new Image();
+                img.onload = function() {
+                    // 使用 Canvas 進行裁切以符合設定比例
+                    processImageWithCanvas(img);
+                };
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // 使用 Canvas 根據設定的比例裁切圖片
+    function processImageWithCanvas(img) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const ratioStr = localStorage.getItem("cfg_ratio") || "4/3";
+        let targetRatio = 4/3;
+        if(ratioStr === "16/9") targetRatio = 16/9;
+        if(ratioStr === "1/1") targetRatio = 1;
+
+        // 計算裁切尺寸
+        let srcW = img.width;
+        let srcH = img.height;
+        let srcRatio = srcW / srcH;
+        
+        let drawW, drawH, startX, startY;
+
+        if (srcRatio > targetRatio) {
+            // 原圖比較寬 -> 裁切寬度
+            drawH = srcH;
+            drawW = srcH * targetRatio;
+            startX = (srcW - drawW) / 2;
+            startY = 0;
+        } else {
+            // 原圖比較高 -> 裁切高度
+            drawW = srcW;
+            drawH = srcW / targetRatio;
+            startX = 0;
+            startY = (srcH - drawH) / 2;
+        }
+
+        // 設定 Canvas 大小 (限制最大寬度以加快上傳)
+        const MAX_WIDTH = 1000; 
+        const scale = MAX_WIDTH / drawW;
+        canvas.width = MAX_WIDTH;
+        canvas.height = drawH * scale;
+
+        // 繪製裁切後的圖
+        ctx.drawImage(img, startX, startY, drawW, drawH, 0, 0, canvas.width, canvas.height);
+
+        // 輸出 Base64
+        processedImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // 顯示預覽
+        const preview = document.getElementById('preview-img');
+        preview.src = processedImageBase64;
+        preview.style.display = 'block';
+        document.querySelector('.placeholder').style.display = 'none';
+    }
+
+    // ================= 4. 語音功能 (Voice) =================
+
+    function toggleVoice() {
+        if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            alert("Browser not supported (瀏覽器不支援)"); return;
+        }
+
+        if (isRecording) {
+            stopVoice();
+        } else {
+            startVoice();
+        }
+    }
+
+    function startVoice() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
-        recognition.continuous = false; 
-        recognition.interimResults = false; 
-        recognition.lang = 'cmn-Hant-TW'; // 繁體中文
+        
+        // 讀取設定語言
+        recognition.lang = localStorage.getItem("cfg_lang") || 'cmn-Hant-TW';
+        recognition.continuous = true;
+        recognition.interimResults = false;
 
         recognition.onstart = function() {
-            isListening = true;
+            isRecording = true;
             const btn = document.getElementById('voiceBtn');
-            btn.innerText = "🔴 Listening... (聽寫中...)";
-            btn.classList.add('listening');
+            btn.innerText = "🛑 Stop Recording (停止錄音)";
+            btn.classList.add('recording');
+            
+            // 設定自動停止計時器
+            const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
+            voiceTimer = setTimeout(() => {
+                stopVoice();
+            }, timeoutSec * 1000);
         };
 
         recognition.onend = function() {
-            isListening = false;
+            isRecording = false;
             const btn = document.getElementById('voiceBtn');
-            btn.innerText = "🎤 Tap to Speak (按我說話輸入)";
-            btn.classList.remove('listening');
+            btn.innerText = "🎤 Start Voice (開始錄音)";
+            btn.classList.remove('recording');
+            if(voiceTimer) clearTimeout(voiceTimer);
         };
 
         recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
+            const transcript = event.results[event.results.length - 1][0].transcript;
             const noteArea = document.getElementById('noteInput');
-            if(noteArea.value.length > 0) {
-                noteArea.value += " " + transcript;
-            } else {
-                noteArea.value = transcript;
-            }
+            noteArea.value += (noteArea.value ? " " : "") + transcript;
         };
 
-        recognition.onerror = function(event) {
-            alert("Voice Error: " + event.error);
-            isListening = false;
-        };
-    } else {
-        document.getElementById('voiceBtn').style.display = 'none'; 
-        alert("Your browser does not support voice input. Please use Chrome/Safari.\n(瀏覽器不支援語音，請用 Chrome 或 Safari)");
+        recognition.start();
     }
 
-    function toggleVoice() {
-        if (!recognition) return;
-        if (isListening) {
-            recognition.stop();
-        } else {
-            recognition.start();
-        }
+    function stopVoice() {
+        if(recognition) recognition.stop();
+        if(voiceTimer) clearTimeout(voiceTimer);
     }
 
-    // --- 圖片預覽 ---
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('preview-img').src = e.target.result;
-                document.getElementById('preview-img').style.display = 'block';
-                document.getElementById('placeholder-text').style.display = 'none';
-                base64Image = e.target.result;
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
+    // ================= 5. 存檔上傳 (Upload) =================
 
-    // --- 存檔 ---
-    function saveToGoogle() {
-        let note = document.getElementById('noteInput').value;
+    function saveToCloud() {
+        const note = document.getElementById('noteInput').value;
+        // 讀取設定的網址
+        const scriptUrl = localStorage.getItem("cfg_script_url") || DEFAULT_SCRIPT_URL;
 
-        if(note === "" && base64Image === "") {
-            alert("Please enter text or take a photo!\n(請輸入文字或拍照！)");
-            return;
+        if(!processedImageBase64 && !note) {
+            alert("Empty! Please take a photo or write a note.\n(內容空白！請拍照或輸入文字)"); return;
         }
 
-        document.getElementById('saveBtn').disabled = true;
-        document.getElementById('saveBtn').innerText = "Uploading...";
-        document.getElementById('loadingMsg').style.display = 'block';
+        const btn = document.getElementById('saveBtn');
+        const loading = document.getElementById('loadingMsg');
+        
+        btn.disabled = true;
+        loading.style.display = 'block';
 
-        let data = { 
-            note: note,
-            image: base64Image
-        };
+        const data = { note: note, image: processedImageBase64 };
 
-        fetch(SCRIPT_URL, {
+        fetch(scriptUrl, {
             method: 'POST',
-            body: JSON.stringify(data)
+            body: JSON.stringify(data) // mode: 'no-cors' needed sometimes but tries normal first
         })
         .then(r => r.json())
         .then(res => {
-            alert("✅ Saved! (已存檔)");
-            resetForm();
+            alert("✅ Upload Success! (上傳成功)");
+            // 清空表單
+            document.getElementById('noteInput').value = "";
+            processedImageBase64 = "";
+            document.getElementById('preview-img').style.display = 'none';
+            document.querySelector('.placeholder').style.display = 'block';
         })
         .catch(e => {
             console.error(e);
-            alert("❌ Error (錯誤)");
+            alert("❌ Upload Failed or Network Error.\n(上傳失敗，請檢查網路或網址設定)");
         })
         .finally(() => {
-            document.getElementById('saveBtn').disabled = false;
-            document.getElementById('saveBtn').innerText = "💾 Save to Cloud (存檔至雲端)";
-            document.getElementById('loadingMsg').style.display = 'none';
+            btn.disabled = false;
+            loading.style.display = 'none';
         });
     }
 
     function viewExcel() {
-        if(SHEET_VIEW_URL.includes("http")) window.open(SHEET_VIEW_URL, '_blank');
-        else alert("Setup URL first! (請設定網址)");
-    }
-
-    function resetForm() {
-        document.getElementById('noteInput').value = "";
-        document.getElementById('cameraInput').value = ""; 
-        document.getElementById('preview-img').style.display = 'none';
-        document.getElementById('placeholder-text').style.display = 'block';
-        base64Image = "";
+        const url = localStorage.getItem("cfg_view_url") || DEFAULT_VIEW_URL;
+        window.open(url, '_blank');
     }
 </script>
 
