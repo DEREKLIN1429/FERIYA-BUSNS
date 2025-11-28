@@ -9,6 +9,7 @@
             --primary-color: #007bff;
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
+            --danger-color: #dc3545; /* 紅色用於登出/錄音中 */
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -35,11 +36,15 @@
         /* --- 主程式畫面 --- */
         #app-screen { display: none; width: 100%; max-width: 500px; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         
+        /* Header 調整：加入左側登出按鈕 */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .header-btn { font-size: 24px; cursor: pointer; color: #555; padding: 8px; border-radius: 50%; transition: background 0.2s; }
+        .header-btn:active { background: #e9ecef; }
+        
+        .header-title { text-align: center; flex-grow: 1; }
         .header-title h2 { margin: 0; color: #333; font-size: 1.3rem; line-height: 1.4; }
         .header-title span { font-size: 0.85em; color: #666; font-weight: normal; }
-        
-        .settings-icon { font-size: 26px; cursor: pointer; color: #555; padding: 8px; }
 
         .card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .section-title { font-weight: bold; color: #555; margin-bottom: 10px; display: block; font-size: 1rem; }
@@ -76,7 +81,7 @@
             background-color: #17a2b8; color: white; font-weight: bold; cursor: pointer;
             display: flex; justify-content: center; align-items: center; gap: 8px;
         }
-        .btn-voice.recording { background-color: #dc3545; animation: pulse 1s infinite; }
+        .btn-voice.recording { background-color: var(--danger-color); animation: pulse 1s infinite; }
 
         /* --- 底部按鈕 --- */
         .footer-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-bottom: 30px;}
@@ -118,10 +123,17 @@
 
     <div id="app-screen">
         <div class="header">
+            <div class="header-btn" onclick="logout()" title="Logout (登出)">
+                🚪
+            </div>
+            
             <div class="header-title">
                 <h2>Key Notes Recorder<br>重點事項紀錄</h2>
             </div>
-            <div class="settings-icon" onclick="openSettings()">⚙️</div>
+            
+            <div class="header-btn" onclick="openSettings()" title="Settings (設定)">
+                ⚙️
+            </div>
         </div>
 
         <div class="card">
@@ -208,6 +220,8 @@
             </div>
 
             <button class="btn-main btn-save" onclick="saveSettings()">Save Settings (儲存設定)</button>
+            
+            <button class="btn-main" onclick="logout()" style="background-color: #dc3545; margin-top: 15px;">Logout (登出系統)</button>
         </div>
     </div>
 
@@ -245,13 +259,24 @@
 
     function checkLogin() {
         const input = document.getElementById('loginPass').value;
-        const storedPass = localStorage.getItem("app_password"); // 從儲存讀取密碼
+        const storedPass = localStorage.getItem("app_password");
 
         if(input === storedPass) {
             localStorage.setItem("isLoggedIn", "true");
             showApp();
         } else {
             alert("Wrong Password! (密碼錯誤)");
+        }
+    }
+
+    // --- 新增：登出功能 ---
+    function logout() {
+        if(confirm("Are you sure you want to logout?\n(確定要登出嗎？)")) {
+            localStorage.removeItem("isLoggedIn"); // 移除登入狀態
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex'; // 顯示登入畫面
+            document.getElementById('loginPass').value = ""; // 清空輸入框
+            closeSettings(); // 關閉設定視窗
         }
     }
 
@@ -273,7 +298,6 @@
     }
 
     function saveSettings() {
-        // 取得 UI 值
         const newPass = document.getElementById('set-password').value;
         const timeout = document.getElementById('set-timeout').value;
         const lang = document.getElementById('set-lang').value;
@@ -281,14 +305,12 @@
         const scriptUrl = document.getElementById('set-script-url').value;
         const viewUrl = document.getElementById('set-view-url').value;
 
-        // 驗證
         if(newPass.trim() === "") {
             alert("Password cannot be empty! (密碼不能空白)");
             return;
         }
 
-        // 存入 LocalStorage
-        localStorage.setItem("app_password", newPass); // 儲存新密碼
+        localStorage.setItem("app_password", newPass); 
         localStorage.setItem("cfg_timeout", timeout);
         localStorage.setItem("cfg_lang", lang);
         localStorage.setItem("cfg_ratio", ratio);
@@ -301,7 +323,6 @@
     }
 
     function loadSettingsToUI() {
-        // 讀取設定顯示在選單上
         document.getElementById('set-password').value = localStorage.getItem("app_password");
         document.getElementById('set-timeout').value = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('set-lang').value = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
@@ -311,11 +332,9 @@
     }
 
     function applySettings() {
-        // 應用設定到主畫面
         const timeout = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('display-timeout').innerText = timeout;
 
-        // 更新圖片容器比例 CSS
         const ratio = localStorage.getItem("cfg_ratio") || "4/3";
         const container = document.getElementById('preview-container');
         container.className = ""; 
