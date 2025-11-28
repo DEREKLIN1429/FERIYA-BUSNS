@@ -37,7 +37,7 @@
             border-radius: 8px; 
             font-size: 16px; 
             box-sizing: border-box; 
-            resize: vertical; /* 允許垂直拉伸 */
+            resize: vertical; 
             font-family: inherit;
         }
         
@@ -54,8 +54,8 @@
         }
 
         /* 按鈕顏色 */
-        .btn-voice { background-color: #17a2b8; color: white; margin-top: 5px; } /* 藍綠色 */
-        .btn-voice.listening { background-color: #dc3545; animation: pulse 1.5s infinite; } /* 錄音中變紅 */
+        .btn-voice { background-color: #17a2b8; color: white; margin-top: 5px; } 
+        .btn-voice.listening { background-color: #dc3545; animation: pulse 1.5s infinite; } 
 
         .btn-save { background-color: #007bff; color: white; }
         .btn-view { background-color: #6c757d; color: white; }
@@ -128,10 +128,15 @@
 
 <script>
     // ==========================================
-    // 請填入你的網址
+    // 這裡是你指定的網址 (已自動歸位)
+    // ==========================================
+    
+    // Google Script 網址 (負責上傳資料) -> 結尾是 exec
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK/exec';
+    
+    // Google Sheet 網址 (負責檢視表格) -> 結尾是 edit...
     const SHEET_VIEW_URL = 'https://docs.google.com/spreadsheets/d/1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA/edit?gid=0#gid=0';
-
+    
     // ==========================================
 
     let base64Image = "";
@@ -140,15 +145,12 @@
     let recognition;
     let isListening = false;
 
-    // 檢查瀏覽器是否支援語音
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
-        recognition.continuous = false; // 講完一句自動停止
-        recognition.interimResults = false; // 不顯示中間過程，只顯示最終結果
-        
-        // 設定語言 (自動偵測 或設定為 'cmn-Hant-TW' 中文)
-        recognition.lang = 'cmn-Hant-TW'; // 預設繁體中文，也可改 'en-US'
+        recognition.continuous = false; 
+        recognition.interimResults = false; 
+        recognition.lang = 'cmn-Hant-TW'; // 繁體中文
 
         recognition.onstart = function() {
             isListening = true;
@@ -167,8 +169,6 @@
         recognition.onresult = function(event) {
             const transcript = event.results[0][0].transcript;
             const noteArea = document.getElementById('noteInput');
-            
-            // 將語音內容附加到現有文字後方 (加個空格)
             if(noteArea.value.length > 0) {
                 noteArea.value += " " + transcript;
             } else {
@@ -181,7 +181,7 @@
             isListening = false;
         };
     } else {
-        document.getElementById('voiceBtn').style.display = 'none'; //如果不支援就隱藏按鈕
+        document.getElementById('voiceBtn').style.display = 'none'; 
         alert("Your browser does not support voice input. Please use Chrome/Safari.\n(瀏覽器不支援語音，請用 Chrome 或 Safari)");
     }
 
@@ -212,7 +212,6 @@
     function saveToGoogle() {
         let note = document.getElementById('noteInput').value;
 
-        // 雖然不是必填，但如果有填會更好
         if(note === "" && base64Image === "") {
             alert("Please enter text or take a photo!\n(請輸入文字或拍照！)");
             return;
@@ -223,8 +222,8 @@
         document.getElementById('loadingMsg').style.display = 'block';
 
         let data = { 
-            note: note,  // 傳送文字
-            image: base64Image // 傳送圖片
+            note: note,
+            image: base64Image
         };
 
         fetch(SCRIPT_URL, {
@@ -263,5 +262,3 @@
 
 </body>
 </html>
-
-
