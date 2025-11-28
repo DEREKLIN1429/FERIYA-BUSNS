@@ -10,7 +10,7 @@
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
             --danger-color: #dc3545;
-            --drive-color: #198754; /* 綠色用於 Google Drive */
+            --drive-color: #198754; 
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -79,24 +79,52 @@
         .btn-cam { background-color: #ffc107; color: #333; }
         .btn-gallery { background-color: #fd7e14; }
 
+        /* --- 圖片預覽框架 (關鍵修改) --- */
         #preview-container { 
-            width: 100%; background: #eee; border-radius: 8px; 
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            width: 100%; 
+            background: #f8f9fa; 
+            border: 2px dashed #bbb; /* 虛線框，標示範圍 */
+            border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden;
             position: relative;
+            box-sizing: border-box;
+            transition: aspect-ratio 0.3s;
         }
+        /* 比例設定 */
         .ratio-4-3 { aspect-ratio: 4/3; }
         .ratio-16-9 { aspect-ratio: 16/9; }
         .ratio-1-1 { aspect-ratio: 1/1; }
         
+        /* 顯示目前比例的標籤 */
+        .ratio-tag {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(0,0,0,0.6); color: white;
+            padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;
+            pointer-events: none;
+        }
+
         #preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
         .placeholder { color: #aaa; text-align: center; }
 
+        /* --- 文字輸入與閃爍效果 --- */
         textarea { 
             width: 100%; height: 120px; padding: 12px; border: 2px solid #eee; 
             border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; font-family: inherit;
+            transition: border 0.3s;
         }
         textarea:focus { border-color: var(--primary-color); outline: none; }
         
+        /* 警示閃爍動畫 */
+        @keyframes flash-red {
+            0% { border-color: #eee; box-shadow: none; background-color: white; }
+            50% { border-color: red; box-shadow: 0 0 10px rgba(255,0,0,0.3); background-color: #fff0f0; }
+            100% { border-color: #eee; box-shadow: none; background-color: white; }
+        }
+        .warning-mode {
+            animation: flash-red 0.5s infinite; /* 每0.5秒閃一次 */
+        }
+
         .voice-controls { margin-top: 10px; }
         .btn-voice { 
             width: 100%; padding: 12px; border: none; border-radius: 8px; 
@@ -109,7 +137,7 @@
         .btn-main { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; }
         .btn-save { background-color: var(--primary-color); }
         .btn-view { background-color: #6c757d; }
-        .btn-drive { background-color: var(--drive-color); } /* 新增：Drive 按鈕樣式 */
+        .btn-drive { background-color: var(--drive-color); }
 
         /* --- 設定彈窗 --- */
         #settings-modal {
@@ -167,23 +195,26 @@
                 <button class="btn-half btn-cam" onclick="triggerCam()">📷 Camera (拍照)</button>
                 <button class="btn-half btn-gallery" onclick="triggerGallery()">🖼️ Gallery (相簿)</button>
             </div>
+            
             <div id="preview-container" class="ratio-4-3">
-                <span class="placeholder">No Image<br>(尚無圖片)</span>
+                <div class="ratio-tag" id="ratio-display-tag">Ratio: 4:3</div>
+                <span class="placeholder">No Image (尚無圖片)<br>Frame aligns to Ratio</span>
                 <img id="preview-img">
             </div>
+            
             <input type="file" id="input-cam" accept="image/*" capture="environment" class="hidden" onchange="handleFile(this)">
             <input type="file" id="input-gallery" accept="image/*" class="hidden" onchange="handleFile(this)">
         </div>
 
-        <div class="card">
+        <div class="card" id="note-card">
             <span class="section-title">2. Note (文字/語音)</span>
             <textarea id="noteInput" placeholder="After taking a photo, type here or use voice... (拍照後，在此輸入或使用語音)"></textarea>
             <div class="voice-controls">
                 <button type="button" class="btn-voice" id="voiceBtn" onclick="toggleVoice()">
                     🎤 Start Voice (開始錄音)
                 </button>
-                <div style="text-align: right; font-size: 0.85em; color: #888; margin-top: 8px;">
-                    Auto-stop in <span id="display-timeout" style="color:#333; font-weight:bold;">10</span>s (自動停止)
+                <div style="text-align: right; font-size: 0.9em; color: #555; margin-top: 8px; font-weight: bold;">
+                    Time left: <span id="display-timeout" style="color:#d63384; font-size:1.1em;">10</span> s (倒數)
                 </div>
             </div>
         </div>
@@ -242,7 +273,7 @@
 
             <div class="modal-group" style="background: #eef7ff; padding: 10px; border-radius: 8px;">
                 <label style="color:var(--primary-color);">6. Google Drive Folder ID (存檔資料夾 ID)</label>
-                <input type="text" id="set-folder-id" class="modal-input" placeholder="Leave empty for Root (空白則存根目錄)">
+                <input type="text" id="set-folder-id" class="modal-input" placeholder="Leave empty for Root">
                 <div class="hint-text">The code at the end of Folder URL (網址最後那串代碼)</div>
             </div>
 
@@ -259,7 +290,8 @@
     let processedImageBase64 = ""; 
     let recognition;
     let isRecording = false;
-    let voiceTimer = null;
+    let voiceTimer = null;         // 系統的停止計時器
+    let countdownInterval = null;  // UI 倒數計時器
 
     // ================= 1. 登入/登出 =================
     window.onload = function() {
@@ -345,12 +377,19 @@
     function applySettings() {
         const timeout = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('display-timeout').innerText = timeout;
+        
+        // 應用比例到預覽框
         const ratio = localStorage.getItem("cfg_ratio") || "4/3";
         const container = document.getElementById('preview-container');
+        const tag = document.getElementById('ratio-display-tag');
+        
         container.className = ""; 
         if(ratio === "4/3") container.classList.add("ratio-4-3");
         else if(ratio === "16/9") container.classList.add("ratio-16-9");
         else container.classList.add("ratio-1-1");
+        
+        // 更新左上角標籤
+        tag.innerText = "Ratio: " + ratio.replace("/", ":");
     }
 
     // ================= 3. 圖片處理 =================
@@ -402,7 +441,7 @@
         document.querySelector('.placeholder').style.display = 'none';
     }
 
-    // ================= 4. 語音功能 =================
+    // ================= 4. 語音功能 (新增：倒數計時與閃爍) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
@@ -410,6 +449,7 @@
         if (isRecording) stopVoice();
         else startVoice();
     }
+    
     function startVoice() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
@@ -420,25 +460,61 @@
             isRecording = true;
             document.getElementById('voiceBtn').classList.add('recording');
             document.getElementById('voiceBtn').innerText = "🛑 Stop";
+            
+            // --- 倒數計時邏輯 ---
             const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
-            voiceTimer = setTimeout(stopVoice, timeoutSec * 1000);
+            let timeLeft = timeoutSec;
+            
+            // 更新畫面
+            document.getElementById('display-timeout').innerText = timeLeft;
+            
+            // 啟動 UI 倒數計時器
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('display-timeout').innerText = timeLeft;
+
+                // 剩3秒時，開始閃爍
+                if(timeLeft <= 3) {
+                    document.getElementById('noteInput').classList.add('warning-mode');
+                }
+
+                // 時間到
+                if(timeLeft <= 0) {
+                    stopVoice(); // 時間到強制停止
+                }
+            }, 1000);
         };
+        
         recognition.onend = function() {
-            isRecording = false;
-            document.getElementById('voiceBtn').classList.remove('recording');
-            document.getElementById('voiceBtn').innerText = "🎤 Start Voice (開始錄音)";
-            if(voiceTimer) clearTimeout(voiceTimer);
+            // 這個通常會在 stopVoice 被呼叫後觸發，或自動斷線觸發
+            if(isRecording) stopVoice(); 
         };
+        
         recognition.onresult = function(event) {
             const transcript = event.results[event.results.length - 1][0].transcript;
             const noteArea = document.getElementById('noteInput');
             noteArea.value += (noteArea.value ? " " : "") + transcript;
         };
+        
         recognition.start();
     }
+
     function stopVoice() {
         if(recognition) recognition.stop();
+        isRecording = false;
+        
+        // 清除計時器
+        if(countdownInterval) clearInterval(countdownInterval);
         if(voiceTimer) clearTimeout(voiceTimer);
+        
+        // 恢復 UI 狀態
+        document.getElementById('voiceBtn').classList.remove('recording');
+        document.getElementById('voiceBtn').innerText = "🎤 Start Voice (開始錄音)";
+        document.getElementById('noteInput').classList.remove('warning-mode'); // 移除閃爍
+        
+        // 重置倒數顯示為設定值
+        const originalTime = localStorage.getItem("cfg_timeout") || "10";
+        document.getElementById('display-timeout').innerText = originalTime;
     }
 
     // ================= 5. 上傳與檢視 =================
@@ -506,7 +582,6 @@
         window.open(url, '_blank');
     }
 
-    // 新增：檢視照片資料夾
     function viewDriveFolder() {
         const folderId = localStorage.getItem("cfg_folder_id");
         if(folderId && folderId.trim() !== "") {
