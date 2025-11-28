@@ -82,6 +82,7 @@
         .btn-cam { background-color: #ffc107; color: #333; }
         .btn-gallery { background-color: #fd7e14; }
 
+        /* --- 圖片預覽框架 --- */
         #preview-container { 
             width: 100%; 
             background: #f0fff0; 
@@ -135,12 +136,32 @@
         }
         textarea:focus { border-color: var(--primary-color); outline: none; }
         
+        /* --- 三階段閃爍動畫 --- */
+        
+        /* 1. 紅色 (緊急) - 0.5s 快閃 */
         @keyframes flash-red {
             0% { border-color: #eee; box-shadow: none; background-color: white; }
-            50% { border-color: red; box-shadow: 0 0 15px rgba(255,0,0,0.5); background-color: #fff0f0; }
+            50% { border-color: red; box-shadow: 0 0 15px rgba(255,0,0,0.6); background-color: #fff0f0; }
             100% { border-color: #eee; box-shadow: none; background-color: white; }
         }
-        .warning-mode { animation: flash-red 0.5s infinite; }
+        
+        /* 2. 紫色 (預警) - 1s 中速閃 */
+        @keyframes flash-purple {
+            0% { border-color: #eee; box-shadow: none; background-color: white; }
+            50% { border-color: #a020f0; box-shadow: 0 0 10px rgba(160,32,240,0.4); background-color: #fcf0ff; }
+            100% { border-color: #eee; box-shadow: none; background-color: white; }
+        }
+
+        /* 3. 綠色 (正常) - 2s 慢速呼吸燈 */
+        @keyframes flash-green {
+            0% { border-color: #eee; box-shadow: none; }
+            50% { border-color: #28a745; box-shadow: 0 0 8px rgba(40,167,69,0.3); }
+            100% { border-color: #eee; box-shadow: none; }
+        }
+
+        .anim-red { animation: flash-red 0.5s infinite; }
+        .anim-purple { animation: flash-purple 1s infinite; }
+        .anim-green { animation: flash-green 2s infinite; }
 
         .voice-controls { margin-top: 10px; }
         
@@ -342,11 +363,11 @@
     
     // 錄音狀態
     let isRecording = false; 
-    let isManualStop = false; // 新增：是否手動停止的標記
+    let isManualStop = false; 
     let voiceTimer = null;         
     let countdownInterval = null;  
     let timeLeft = 0; 
-    let snapshotText = ""; // 關鍵：文字快照，用來避免重複
+    let snapshotText = ""; 
 
     window.onload = function() {
         if(!localStorage.getItem("app_password")) {
@@ -551,13 +572,13 @@
         }
     }
 
-    // ================= 語音功能 (修正：重複文字 & 強制不中斷) =================
+    // ================= 語音功能 (修正版：三階段閃爍) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
         }
         if (isRecording) {
-            manualStopVoice(); // 只有按按鈕才能停止
+            manualStopVoice(); 
         } else {
             startVoice();
         }
@@ -571,68 +592,70 @@
         recognition.continuous = true; 
         recognition.interimResults = true; 
 
-        // 1. 初始化
         isRecording = true;
-        isManualStop = false; // 重置手動停止旗標
+        isManualStop = false; 
         document.getElementById('voiceBtn').classList.add('recording');
         document.getElementById('voiceBtn').innerText = "🛑 Stop";
         
-        // 2. 建立文字快照：記錄目前的文字，之後只會「往後加」
+        // 建立快照
         snapshotText = document.getElementById('noteInput').value;
-        // 如果快照有文字但沒空格，補一個空格
         if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
             snapshotText += " ";
         }
 
-        // 3. 設定倒數
         const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
         const warningSec = parseInt(localStorage.getItem("cfg_warning") || "3");
-        timeLeft = timeoutSec;
+        // 紫色開始時間點 (比紅色多5秒)
+        const purpleSec = warningSec + 5; 
         
+        timeLeft = timeoutSec;
         document.getElementById('display-timeout').innerText = timeLeft;
         
+        const noteInput = document.getElementById('noteInput');
+        noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
+        noteInput.classList.add('anim-green'); // 初始綠色
+
         if(countdownInterval) clearInterval(countdownInterval);
 
         countdownInterval = setInterval(() => {
             timeLeft--;
             document.getElementById('display-timeout').innerText = timeLeft;
 
+            // 清除所有動畫 class
+            noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
+
+            // 依時間加入對應 class
             if(timeLeft <= warningSec) {
-                document.getElementById('noteInput').classList.add('warning-mode');
+                noteInput.classList.add('anim-red');
+            } else if (timeLeft <= purpleSec) {
+                noteInput.classList.add('anim-purple');
+            } else {
+                noteInput.classList.add('anim-green');
             }
 
             if(timeLeft <= 0) {
-                manualStopVoice(); // 時間到才停止
+                manualStopVoice(); 
             }
         }, 1000);
 
-        // 4. 綁定辨識事件
         recognition.onresult = function(event) {
             let currentSessionText = ''; 
-            
-            // 抓取這次 startVoice() 以後的所有話
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 currentSessionText += event.results[i][0].transcript;
             }
-
-            // 5. 更新顯示：快照 + 這次說的話 (絕對不會重複)
             const noteArea = document.getElementById('noteInput');
             noteArea.value = snapshotText + currentSessionText;
             noteArea.scrollTop = noteArea.scrollHeight;
         };
 
-        // 6. 強制不中斷邏輯
         recognition.onend = function() {
-            // 如果還在錄音模式 (時間未到) 且 不是手動停止
             if (isRecording && !isManualStop && timeLeft > 0) {
-                // 自動重啟：更新快照為目前最新的內容
                 snapshotText = document.getElementById('noteInput').value;
                 if(snapshotText.length > 0 && !snapshotText.endsWith(" ")) {
                     snapshotText += " ";
                 }
-                recognition.start(); // 立即重啟
+                recognition.start(); 
             } else {
-                // 真的停止
                 resetVoiceUI();
             }
         };
@@ -646,7 +669,7 @@
 
     function manualStopVoice() {
         isRecording = false; 
-        isManualStop = true; // 標記為手動停止，阻止 onend 自動重啟
+        isManualStop = true; 
         if(recognition) recognition.stop();
         resetVoiceUI();
     }
@@ -656,7 +679,10 @@
         
         document.getElementById('voiceBtn').classList.remove('recording');
         document.getElementById('voiceBtn').innerText = "🎤 Start Voice (開始錄音)";
-        document.getElementById('noteInput').classList.remove('warning-mode'); 
+        
+        // 移除所有動畫
+        const noteInput = document.getElementById('noteInput');
+        noteInput.classList.remove('anim-red', 'anim-purple', 'anim-green');
         
         const originalTime = localStorage.getItem("cfg_timeout") || "10";
         document.getElementById('display-timeout').innerText = originalTime;
