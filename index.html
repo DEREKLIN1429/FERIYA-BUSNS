@@ -11,6 +11,7 @@
             --card-bg: #ffffff;
             --danger-color: #dc3545;
             --drive-color: #198754; 
+            --frame-color: #00e600; /* 亮綠色框架 */
         }
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -84,11 +85,39 @@
         .btn-cam { background-color: #ffc107; color: #333; }
         .btn-gallery { background-color: #fd7e14; }
 
-        /* --- 圖片預覽框架 --- */
+        /* --- 圖片預覽框架 (綠色觀景窗設計) --- */
         #preview-container { 
-            width: 100%; background: #f8f9fa; border: 3px dashed #bbb; border-radius: 8px; 
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
-            position: relative; box-sizing: border-box; transition: aspect-ratio 0.3s ease; 
+            width: 100%; 
+            background: #f0fff0; /* 淡淡的綠色背景 */
+            border: 2px solid var(--frame-color); /* 改成實線綠色 */
+            border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden;
+            position: relative;
+            box-sizing: border-box;
+            transition: aspect-ratio 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 230, 0, 0.15); /* 微微發光 */
+        }
+        
+        /* 四角準心 (Corner Brackets) */
+        #preview-container::after {
+            content: "";
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            border: 4px solid transparent;
+            /* 繪製四個角落 */
+            background: 
+                linear-gradient(to right, var(--frame-color) 4px, transparent 4px) 0 0,
+                linear-gradient(to bottom, var(--frame-color) 4px, transparent 4px) 0 0,
+                linear-gradient(to left, var(--frame-color) 4px, transparent 4px) 100% 0,
+                linear-gradient(to bottom, var(--frame-color) 4px, transparent 4px) 100% 0,
+                linear-gradient(to right, var(--frame-color) 4px, transparent 4px) 0 100%,
+                linear-gradient(to top, var(--frame-color) 4px, transparent 4px) 0 100%,
+                linear-gradient(to left, var(--frame-color) 4px, transparent 4px) 100% 100%,
+                linear-gradient(to top, var(--frame-color) 4px, transparent 4px) 100% 100%;
+            background-repeat: no-repeat;
+            background-size: 20px 20px; /* 角落大小 */
+            pointer-events: none;
+            margin: 5px; /* 內縮一點點 */
         }
         
         .ratio-4-3 { aspect-ratio: 4/3; }
@@ -99,12 +128,13 @@
         
         .ratio-tag {
             position: absolute; top: 10px; left: 10px;
-            background: rgba(0,0,0,0.6); color: white;
+            background: var(--frame-color); color: #000; font-weight: bold;
             padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
-        #preview-img { width: 100%; height: 100%; object-fit: contain; display: none; }
-        .placeholder { color: #aaa; text-align: center; font-size: 0.9em; }
+        #preview-img { width: 100%; height: 100%; object-fit: contain; display: none; z-index: 1; }
+        .placeholder { color: #555; text-align: center; font-size: 0.9em; z-index: 0; font-weight: 500;}
 
         textarea { 
             width: 100%; height: 120px; padding: 12px; border: 2px solid #eee; 
@@ -195,7 +225,7 @@
             
             <div id="preview-container" class="ratio-4-3">
                 <div class="ratio-tag" id="ratio-display-tag">Ratio: 4:3</div>
-                <span class="placeholder">Current Ratio Frame<br>(目前相機比例框架)</span>
+                <span class="placeholder">Green Frame indicates Crop Area<br>(綠框為實際裁切範圍)</span>
                 <img id="preview-img">
             </div>
             
@@ -291,7 +321,7 @@
 <script>
     // ================= 初始化 =================
     const DEFAULT_PASS = "1234"; 
-    // 預設 ID (從你提供的網址提取)
+    // 預設 ID
     const DEFAULT_SCRIPT_ID = "AKfycbzTDioUw8L5vZ9H3rUEB-df_sSmJ4kg86NFraktwmU4-qtiESh_u_tZPnyIsUOW9LaK";
     const DEFAULT_SHEET_ID = "1GcnAkIHAhnVjrH9bO9TQbdTUwQT17XtyQWUPh7WSTLA";
 
@@ -300,6 +330,7 @@
     let isRecording = false;
     let voiceTimer = null;         
     let countdownInterval = null;  
+    let textBeforeRec = "";
 
     window.onload = function() {
         if(!localStorage.getItem("app_password")) {
@@ -350,11 +381,9 @@
         document.getElementById('settings-modal').style.display = 'none';
     }
     
-    // 輔助函式：從網址中提取 ID (如果使用者貼的是網址)
     function extractId(input) {
         if (!input) return "";
         input = input.trim();
-        // 如果是網址，嘗試提取
         if (input.includes("script.google.com")) {
             const match = input.match(/\/s\/([a-zA-Z0-9-_]+)\/exec/);
             return match ? match[1] : input;
@@ -367,7 +396,6 @@
             const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : input;
         }
-        // 如果不是網址，假設它就是 ID
         return input;
     }
 
@@ -378,7 +406,6 @@
         const lang = document.getElementById('set-lang').value;
         const ratio = document.getElementById('set-ratio').value;
         
-        // 取得輸入值並自動提取 ID
         const scriptId = extractId(document.getElementById('set-script-id').value);
         const sheetId = extractId(document.getElementById('set-sheet-id').value);
         const folderId = extractId(document.getElementById('set-folder-id').value);
@@ -390,8 +417,6 @@
         localStorage.setItem("cfg_warning", warning);
         localStorage.setItem("cfg_lang", lang);
         localStorage.setItem("cfg_ratio", ratio);
-        
-        // 儲存 ID
         localStorage.setItem("cfg_script_id", scriptId);
         localStorage.setItem("cfg_sheet_id", sheetId);
         localStorage.setItem("cfg_folder_id", folderId); 
@@ -408,7 +433,6 @@
         document.getElementById('set-lang').value = localStorage.getItem("cfg_lang") || "cmn-Hant-TW";
         document.getElementById('set-ratio').value = localStorage.getItem("cfg_ratio") || "4/3";
         
-        // 讀取 ID
         document.getElementById('set-script-id').value = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         document.getElementById('set-sheet-id').value = localStorage.getItem("cfg_sheet_id") || DEFAULT_SHEET_ID;
         document.getElementById('set-folder-id').value = localStorage.getItem("cfg_folder_id") || "";
@@ -501,7 +525,7 @@
         }
     }
 
-    // ================= 語音功能 =================
+    // ================= 語音功能 (即時顯示) =================
     function toggleVoice() {
         if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             alert("Browser not supported"); return;
@@ -514,13 +538,17 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
         recognition.lang = localStorage.getItem("cfg_lang") || 'cmn-Hant-TW';
-        recognition.continuous = true; recognition.interimResults = false;
+        
+        recognition.continuous = true; 
+        recognition.interimResults = true; 
 
         recognition.onstart = function() {
             isRecording = true;
             document.getElementById('voiceBtn').classList.add('recording');
             document.getElementById('voiceBtn').innerText = "🛑 Stop";
             
+            textBeforeRec = document.getElementById('noteInput').value;
+
             const timeoutSec = parseInt(localStorage.getItem("cfg_timeout") || "10");
             const warningSec = parseInt(localStorage.getItem("cfg_warning") || "3");
             let timeLeft = timeoutSec;
@@ -546,9 +574,22 @@
         };
         
         recognition.onresult = function(event) {
-            const transcript = event.results[event.results.length - 1][0].transcript;
+            let interim_transcript = '';
+            let final_transcript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    final_transcript += event.results[i][0].transcript;
+                } else {
+                    interim_transcript += event.results[i][0].transcript;
+                }
+            }
+            if (final_transcript) {
+                textBeforeRec += (textBeforeRec ? " " : "") + final_transcript;
+            }
             const noteArea = document.getElementById('noteInput');
-            noteArea.value += (noteArea.value ? " " : "") + transcript;
+            noteArea.value = textBeforeRec + (interim_transcript ? (" " + interim_transcript) : "");
+            noteArea.scrollTop = noteArea.scrollHeight;
         };
         
         recognition.start();
@@ -569,7 +610,7 @@
         document.getElementById('display-timeout').innerText = originalTime;
     }
 
-    // ================= 上傳與檢視 (使用 ID 組合網址) =================
+    // ================= 上傳與檢視 =================
     function showStatus(type, title, subtitle) {
         const modal = document.getElementById('status-modal');
         const spinner = document.getElementById('status-spinner');
@@ -595,8 +636,6 @@
     function saveToCloud() {
         const note = document.getElementById('noteInput').value;
         const folderId = localStorage.getItem("cfg_folder_id") || "";
-        
-        // 組合上傳網址
         const scriptId = localStorage.getItem("cfg_script_id") || DEFAULT_SCRIPT_ID;
         const scriptUrl = `https://script.google.com/macros/s/${scriptId}/exec`;
 
@@ -621,9 +660,7 @@
             processedImageBase64 = "";
             document.getElementById('preview-img').style.display = 'none';
             document.querySelector('.placeholder').style.display = 'block';
-            
             applySettings();
-
             setTimeout(() => { closeStatusModal(); }, 2000);
         })
         .catch(e => {
